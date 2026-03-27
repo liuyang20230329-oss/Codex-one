@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
+import '../domain/phone_verification_session.dart';
 
 enum AuthStatus {
   unauthenticated,
@@ -24,10 +25,12 @@ class AuthController extends ChangeNotifier {
   AuthStatus _status;
   AppUser? _currentUser;
   String? _errorMessage;
+  PhoneVerificationSession? _pendingPhoneSession;
 
   AuthStatus get status => _status;
   AppUser? get currentUser => _currentUser;
   String? get errorMessage => _errorMessage;
+  PhoneVerificationSession? get pendingPhoneSession => _pendingPhoneSession;
   bool get isBusy => _status == AuthStatus.authenticating;
 
   Future<void> signIn({
@@ -62,9 +65,84 @@ class AuthController extends ChangeNotifier {
 
     await _repository.signOut();
     _currentUser = null;
+    _pendingPhoneSession = null;
     _errorMessage = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
+  }
+
+  Future<bool> updateProfile({
+    required String name,
+    required String avatarKey,
+  }) async {
+    return _runAuthenticatedMutation(
+      action: () => _repository.updateProfile(
+        name: name,
+        avatarKey: avatarKey,
+      ),
+      onSuccess: (user) {
+        _currentUser = user;
+      },
+    );
+  }
+
+  Future<PhoneVerificationSession?> requestPhoneVerification({
+    required String phoneNumber,
+  }) async {
+    return _runAuxiliaryMutation(
+      action: () => _repository.requestPhoneVerification(
+        phoneNumber: phoneNumber,
+      ),
+      onSuccess: (session) {
+        _pendingPhoneSession = session;
+      },
+    );
+  }
+
+  Future<bool> confirmPhoneVerification({
+    required String code,
+  }) async {
+    final session = _pendingPhoneSession;
+    if (session == null) {
+      _errorMessage = 'Start phone verification first.';
+      notifyListeners();
+      return false;
+    }
+
+    return _runAuthenticatedMutation(
+      action: () => _repository.confirmPhoneVerification(
+        sessionId: session.sessionId,
+        code: code,
+      ),
+      onSuccess: (user) {
+        _currentUser = user;
+        _pendingPhoneSession = null;
+      },
+    );
+  }
+
+  Future<bool> submitIdentityVerification({
+    required String legalName,
+    required String idNumber,
+  }) async {
+    return _runAuthenticatedMutation(
+      action: () => _repository.submitIdentityVerification(
+        legalName: legalName,
+        idNumber: idNumber,
+      ),
+      onSuccess: (user) {
+        _currentUser = user;
+      },
+    );
+  }
+
+  Future<bool> completeFaceVerification() async {
+    return _runAuthenticatedMutation(
+      action: _repository.completeFaceVerification,
+      onSuccess: (user) {
+        _currentUser = user;
+      },
+    );
   }
 
   void clearError() {
@@ -85,17 +163,84 @@ class AuthController extends ChangeNotifier {
 
     try {
       _currentUser = await action();
+      _pendingPhoneSession = null;
       _status = AuthStatus.authenticated;
     } on AuthException catch (error) {
       _currentUser = null;
+      _pendingPhoneSession = null;
       _status = AuthStatus.unauthenticated;
       _errorMessage = error.message;
     } catch (_) {
       _currentUser = null;
+      _pendingPhoneSession = null;
       _status = AuthStatus.unauthenticated;
       _errorMessage = 'Authentication is temporarily unavailable.';
     }
 
     notifyListeners();
+  }
+
+  Future<bool> _runAuthenticatedMutation({
+    required Future<AppUser> Function() action,
+    required void Function(AppUser user) onSuccess,
+  }) async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final user = await action();
+      onSuccess(user);
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _errorMessage = 'Authentication is temporarily unavailable.';
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<T?> _runAuxiliaryMutation<T>({
+    required Future<T> Function() action,
+    required void Function(T result) onSuccess,
+  }) async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await action();
+      onSuccess(result);
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return result;
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return null;
+    } catch (_) {
+      _errorMessage = 'Authentication is temporarily unavailable.';
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return null;
+    }
   }
 }

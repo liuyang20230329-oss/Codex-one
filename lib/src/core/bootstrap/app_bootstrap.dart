@@ -5,6 +5,8 @@ import '../../../firebase_options.dart';
 import '../../features/auth/data/demo_auth_repository.dart';
 import '../../features/auth/data/firebase_auth_repository.dart';
 import '../../features/auth/domain/auth_repository.dart';
+import '../../features/chat/data/demo_chat_repository.dart';
+import '../../features/chat/domain/chat_repository.dart';
 
 enum AuthBackend {
   firebase,
@@ -14,12 +16,14 @@ enum AuthBackend {
 class AppBootstrapResult {
   const AppBootstrapResult({
     required this.repository,
+    required this.chatRepository,
     required this.backend,
     required this.statusLabel,
     required this.statusMessage,
   });
 
   final AuthRepository repository;
+  final ChatRepository chatRepository;
   final AuthBackend backend;
   final String statusLabel;
   final String statusMessage;
@@ -31,6 +35,7 @@ class AppBootstrap {
     if (!_hasRealFirebaseValues(options)) {
       return AppBootstrapResult(
         repository: DemoAuthRepository.seeded(),
+        chatRepository: DemoChatRepository(),
         backend: AuthBackend.demo,
         statusLabel: 'Demo auth mode',
         statusMessage:
@@ -49,6 +54,7 @@ class AppBootstrap {
         repository: FirebaseAuthRepository(
           auth: FirebaseAuth.instance,
         ),
+        chatRepository: DemoChatRepository(),
         backend: AuthBackend.firebase,
         statusLabel: 'Firebase auth active',
         statusMessage:
@@ -57,6 +63,7 @@ class AppBootstrap {
     } catch (_) {
       return AppBootstrapResult(
         repository: DemoAuthRepository.seeded(),
+        chatRepository: DemoChatRepository(),
         backend: AuthBackend.demo,
         statusLabel: 'Demo auth mode',
         statusMessage:

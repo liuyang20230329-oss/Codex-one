@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/bootstrap/app_bootstrap.dart';
+import '../../chat/presentation/chat_controller.dart';
 import '../../home/presentation/home_screen.dart';
 import 'auth_controller.dart';
 import 'auth_screen.dart';
@@ -9,12 +10,14 @@ class AuthGate extends StatelessWidget {
   const AuthGate({
     super.key,
     required this.controller,
+    required this.chatController,
     required this.backend,
     required this.statusLabel,
     required this.statusMessage,
   });
 
   final AuthController controller;
+  final ChatController chatController;
   final AuthBackend backend;
   final String statusLabel;
   final String statusMessage;
@@ -37,6 +40,7 @@ class AuthGate extends StatelessWidget {
               : HomeScreen(
                   key: const ValueKey('home-screen'),
                   controller: controller,
+                  chatController: chatController,
                   user: controller.currentUser!,
                   statusLabel: statusLabel,
                   statusMessage: statusMessage,

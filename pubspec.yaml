@@ -2,8 +2,8 @@ name: codex_one
 description: Social mobile app starter scaffold for Codex One.
 publish_to: "none"
 
-# SemVer pre-release for the March 27, 2026 Firebase auth starter.
-version: 0.2.0-dev.1+20260327
+# SemVer pre-release for the March 28, 2026 account and chat MVP drop.
+version: 0.3.0-dev.1+20260328
 
 environment:
   sdk: ^3.6.0
