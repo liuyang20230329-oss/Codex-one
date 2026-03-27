@@ -74,6 +74,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _authenticate({
     required Future<AppUser> Function() action,
   }) async {
+    // One shared flow keeps sign-in and sign-up state changes consistent.
     _status = AuthStatus.authenticating;
     _errorMessage = null;
     notifyListeners();
@@ -88,7 +89,7 @@ class AuthController extends ChangeNotifier {
     } catch (_) {
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
-      _errorMessage = '暂时无法完成认证，请稍后再试。';
+      _errorMessage = 'Authentication is temporarily unavailable.';
     }
 
     notifyListeners();

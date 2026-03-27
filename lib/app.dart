@@ -18,6 +18,7 @@ class _CodexOneAppState extends State<CodexOneApp> {
   @override
   void initState() {
     super.initState();
+    // Keep one auth controller alive for the full app session.
     _authController = AuthController(
       repository: DemoAuthRepository.seeded(),
     );

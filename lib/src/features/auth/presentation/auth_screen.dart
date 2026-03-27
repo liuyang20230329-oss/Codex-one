@@ -74,12 +74,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   Text(
-                                    '连接文字、语音和视频',
+                                    'Connect through text, voice, and video',
                                     style: theme.textTheme.headlineMedium,
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    '先把社交 App 最关键的用户入口搭起来。今天这版先跑通注册登录，后面继续接入消息、语音房和视频通话。',
+                                    'This starter focuses on a reliable sign-in and sign-up flow first, then leaves room for chat, voice rooms, and video calls.',
                                     style: theme.textTheme.bodyLarge,
                                   ),
                                 ],
@@ -91,11 +91,11 @@ class _AuthScreenState extends State<AuthScreen> {
                               segments: const <ButtonSegment<AuthMode>>[
                                 ButtonSegment<AuthMode>(
                                   value: AuthMode.signIn,
-                                  label: Text('登录'),
+                                  label: Text('Sign in'),
                                 ),
                                 ButtonSegment<AuthMode>(
                                   value: AuthMode.signUp,
-                                  label: Text('注册'),
+                                  label: Text('Sign up'),
                                 ),
                               ],
                               selected: <AuthMode>{_mode},
@@ -194,11 +194,11 @@ class _DemoAccountCard extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('演示账号'),
+          Text('Demo account'),
           SizedBox(height: 8),
-          Text('邮箱：demo@codex.one'),
+          Text('Email: demo@codex.one'),
           SizedBox(height: 6),
-          Text('密码：Password123!'),
+          Text('Password: Password123!'),
         ],
       ),
     );

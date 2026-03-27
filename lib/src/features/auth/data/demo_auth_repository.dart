@@ -34,10 +34,10 @@ class DemoAuthRepository implements AuthRepository {
     final normalizedEmail = email.trim().toLowerCase();
     final account = _accounts[normalizedEmail];
     if (account == null) {
-      throw const AuthException('这个邮箱还没有注册。');
+      throw const AuthException('No account was found for this email.');
     }
     if (account.password != password) {
-      throw const AuthException('密码不正确，请重试。');
+      throw const AuthException('The password is incorrect. Please try again.');
     }
 
     return account.toUser();
@@ -53,7 +53,7 @@ class DemoAuthRepository implements AuthRepository {
 
     final normalizedEmail = email.trim().toLowerCase();
     if (_accounts.containsKey(normalizedEmail)) {
-      throw const AuthException('这个邮箱已经注册过了。');
+      throw const AuthException('This email is already registered.');
     }
 
     final account = _StoredAccount(
