@@ -6,6 +6,7 @@ Desktop.ini
 # Editor settings
 .idea/
 .vscode/
+*.iml
 *.swp
 *.swo
 
@@ -39,4 +40,5 @@ coverage/
 .flutter-plugins
 .flutter-plugins-dependencies
 .fvm/
+.metadata
 .pub/

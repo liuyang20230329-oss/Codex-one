@@ -5,21 +5,17 @@ import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
 
 class DemoAuthRepository implements AuthRepository {
-  DemoAuthRepository({
-    Map<String, _StoredAccount>? accounts,
-  }) : _accounts = accounts ?? <String, _StoredAccount>{};
+  DemoAuthRepository() : _accounts = <String, _StoredAccount>{};
 
   factory DemoAuthRepository.seeded() {
-    return DemoAuthRepository(
-      accounts: <String, _StoredAccount>{
-        'demo@codex.one': const _StoredAccount(
-          id: 'demo-user',
-          name: 'Codex Demo',
-          email: 'demo@codex.one',
-          password: 'Password123!',
-        ),
-      },
+    final repository = DemoAuthRepository();
+    repository._accounts['demo@codex.one'] = const _StoredAccount(
+      id: 'demo-user',
+      name: 'Codex Demo',
+      email: 'demo@codex.one',
+      password: 'Password123!',
     );
+    return repository;
   }
 
   final Map<String, _StoredAccount> _accounts;

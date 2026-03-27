@@ -54,7 +54,7 @@ class HomeScreen extends StatelessWidget {
                   Text(
                     'Your auth flow is ready. The next step is to expand this into chat, voice rooms, video calls, and user profiles.',
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.92),
+                      color: Colors.white.withValues(alpha: 0.92),
                     ),
                   ),
                 ],
