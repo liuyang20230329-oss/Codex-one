@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/persistence/json_preferences_store.dart';
 import 'account_flow_helpers.dart';
+import 'account_json_codec.dart';
 import '../domain/account_verification.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
@@ -11,12 +13,16 @@ import '../domain/verification_status.dart';
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({
     required FirebaseAuth auth,
+    JsonPreferencesStore? store,
   })  : _auth = auth,
+        _store = store,
         _currentUser = _mapUser(auth.currentUser, null);
 
   final FirebaseAuth _auth;
+  final JsonPreferencesStore? _store;
   AppUser? _currentUser;
   PhoneVerificationSession? _pendingPhoneSession;
+  static const _localUserStatePrefix = 'firebase_auth_user_state_v2_';
 
   @override
   AppUser? get currentUser {
@@ -27,6 +33,7 @@ class FirebaseAuthRepository implements AuthRepository {
     }
 
     _currentUser = _mapUser(authUser, _currentUser);
+    _currentUser = _restoreLocalState(_currentUser);
     return _currentUser;
   }
 
@@ -48,6 +55,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
       _pendingPhoneSession = null;
       _currentUser = _mapUser(user, _currentUser);
+      _currentUser = _restoreLocalState(_currentUser);
       return _currentUser!;
     } on FirebaseAuthException catch (error) {
       throw AuthException(_messageFor(error));
@@ -78,6 +86,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
       final refreshedUser = _auth.currentUser ?? user;
       _currentUser = _mapUser(refreshedUser, _currentUser);
+      _currentUser = _restoreLocalState(_currentUser);
       return _currentUser!;
     } on FirebaseAuthException catch (error) {
       throw AuthException(_messageFor(error));
@@ -107,6 +116,7 @@ class FirebaseAuthRepository implements AuthRepository {
       avatarKey: avatarKey,
       verification: verification,
     );
+    await _persistLocalState();
     return _currentUser!;
   }
 
@@ -143,6 +153,7 @@ class FirebaseAuthRepository implements AuthRepository {
       ),
     );
     _pendingPhoneSession = null;
+    await _persistLocalState();
     return _currentUser!;
   }
 
@@ -170,6 +181,7 @@ class FirebaseAuthRepository implements AuthRepository {
         idNumber: normalizedId,
       ),
     );
+    await _persistLocalState();
     return _currentUser!;
   }
 
@@ -185,6 +197,7 @@ class FirebaseAuthRepository implements AuthRepository {
     _currentUser = user.copyWith(
       verification: applyFaceVerification(current: user.verification),
     );
+    await _persistLocalState();
     return _currentUser!;
   }
 
@@ -201,6 +214,37 @@ class FirebaseAuthRepository implements AuthRepository {
       throw const AuthException('Please sign in to continue.');
     }
     return user;
+  }
+
+  AppUser? _restoreLocalState(AppUser? user) {
+    if (user == null) {
+      return null;
+    }
+
+    final stored = _store?.readObjectSync(
+      '$_localUserStatePrefix${user.id}',
+    );
+    if (stored == null) {
+      return user;
+    }
+
+    final restored = appUserFromJson(stored);
+    return user.copyWith(
+      name: restored.name.isEmpty ? user.name : restored.name,
+      avatarKey: restored.avatarKey,
+      verification: restored.verification,
+    );
+  }
+
+  Future<void> _persistLocalState() async {
+    final user = _currentUser;
+    if (_store == null || user == null) {
+      return;
+    }
+    await _store.writeJson(
+      '$_localUserStatePrefix${user.id}',
+      appUserToJson(user),
+    );
   }
 
   static AppUser? _mapUser(User? user, AppUser? previousUser) {

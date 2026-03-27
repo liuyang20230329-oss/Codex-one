@@ -2,7 +2,7 @@
 
 Branch: `2026.3.27`
 
-Version: `0.3.0-dev.1+20260328`
+Version: `0.3.1-dev.1+20260328`
 
 This repository now contains a mobile social app starter with an expanded
 account system and a text chat MVP. The current scope covers sign-in, sign-up,
@@ -24,6 +24,8 @@ ownership status, and seeded text conversations for on-device testing.
 - Identity verification submission flow
 - Face verification state flow for avatar ownership
 - Text chat MVP with seeded threads and message composer
+- Local persistence for demo accounts and chat history
+- Concierge system messages that react to profile and verification changes
 - Basic auth tests
 - Account verification tests
 - Chat controller tests
@@ -39,6 +41,8 @@ ownership status, and seeded text conversations for on-device testing.
 - Identity verification and face verification currently simulate approval logic
   inside the app while keeping the real workflow boundaries ready for a future
   compliance backend.
+- Demo accounts, account progress, and chat threads now survive app restarts on
+  the same device.
 
 Demo account:
 

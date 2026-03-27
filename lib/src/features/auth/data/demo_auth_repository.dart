@@ -1,32 +1,59 @@
 import 'dart:async';
 
 import 'account_flow_helpers.dart';
+import 'account_json_codec.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
 import '../domain/phone_verification_session.dart';
 import '../domain/verification_status.dart';
+import '../../../core/persistence/json_preferences_store.dart';
 
 class DemoAuthRepository implements AuthRepository {
-  DemoAuthRepository() : _accounts = <String, _StoredAccount>{};
+  DemoAuthRepository._({
+    required Map<String, _StoredAccount> accounts,
+    AppUser? currentUser,
+    JsonPreferencesStore? store,
+  })  : _accounts = accounts,
+        _currentUser = currentUser,
+        _store = store;
 
-  factory DemoAuthRepository.seeded() {
-    final repository = DemoAuthRepository();
-    repository._accounts['demo@codex.one'] = _StoredAccount(
-      user: buildAccountUser(
-        id: 'demo-user',
-        name: 'Codex Demo',
-        email: 'demo@codex.one',
-        avatarKey: 'aurora',
-      ),
-      password: 'Password123!',
+  static const _accountsStoreKey = 'demo_auth_accounts_v2';
+  static const _currentUserStoreKey = 'demo_auth_current_user_email_v2';
+
+  static Future<DemoAuthRepository> seeded({
+    JsonPreferencesStore? store,
+  }) async {
+    final accounts = await _loadAccounts(store);
+    if (accounts.isEmpty) {
+      accounts['demo@codex.one'] = _StoredAccount(
+        user: buildAccountUser(
+          id: 'demo-user',
+          name: 'Codex Demo',
+          email: 'demo@codex.one',
+          avatarKey: 'aurora',
+        ),
+        password: 'Password123!',
+      );
+      await _persistAccounts(store, accounts);
+    }
+
+    final currentUserEmail = await _loadCurrentUserEmail(store);
+    final currentUser = currentUserEmail == null
+        ? null
+        : accounts[currentUserEmail]?.user;
+
+    return DemoAuthRepository._(
+      accounts: accounts,
+      currentUser: currentUser,
+      store: store,
     );
-    return repository;
   }
 
   final Map<String, _StoredAccount> _accounts;
   AppUser? _currentUser;
   PhoneVerificationSession? _pendingPhoneSession;
+  final JsonPreferencesStore? _store;
 
   @override
   AppUser? get currentUser => _currentUser;
@@ -49,6 +76,7 @@ class DemoAuthRepository implements AuthRepository {
 
     _pendingPhoneSession = null;
     _currentUser = account.user;
+    await _persistState();
     return _currentUser!;
   }
 
@@ -75,6 +103,7 @@ class DemoAuthRepository implements AuthRepository {
     );
     _accounts[normalizedEmail] = account;
     _currentUser = account.user;
+    await _persistState();
     return _currentUser!;
   }
 
@@ -83,6 +112,7 @@ class DemoAuthRepository implements AuthRepository {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     _pendingPhoneSession = null;
     _currentUser = null;
+    await _persistState();
   }
 
   @override
@@ -105,6 +135,7 @@ class DemoAuthRepository implements AuthRepository {
       verification: verification,
     );
     _storeCurrentUser(updatedUser);
+    await _persistState();
     return updatedUser;
   }
 
@@ -144,6 +175,7 @@ class DemoAuthRepository implements AuthRepository {
     );
     _storeCurrentUser(updatedUser);
     _pendingPhoneSession = null;
+    await _persistState();
     return updatedUser;
   }
 
@@ -173,6 +205,7 @@ class DemoAuthRepository implements AuthRepository {
       ),
     );
     _storeCurrentUser(updatedUser);
+    await _persistState();
     return updatedUser;
   }
 
@@ -192,6 +225,7 @@ class DemoAuthRepository implements AuthRepository {
       ),
     );
     _storeCurrentUser(updatedUser);
+    await _persistState();
     return updatedUser;
   }
 
@@ -212,6 +246,75 @@ class DemoAuthRepository implements AuthRepository {
 
     _accounts[key] = account.copyWith(user: user);
     _currentUser = user;
+  }
+
+  Future<void> _persistState() async {
+    await _persistAccounts(_store, _accounts);
+    final currentEmail = _currentUser?.email.trim().toLowerCase();
+    if (_store == null) {
+      return;
+    }
+    if (currentEmail == null) {
+      await _store.remove(_currentUserStoreKey);
+      return;
+    }
+    await _store.writeJson(_currentUserStoreKey, <String, Object?>{
+      'email': currentEmail,
+    });
+  }
+
+  static Future<Map<String, _StoredAccount>> _loadAccounts(
+    JsonPreferencesStore? store,
+  ) async {
+    final storedList = await store?.readList(_accountsStoreKey);
+    final accounts = <String, _StoredAccount>{};
+    if (storedList == null) {
+      return accounts;
+    }
+
+    for (final item in storedList) {
+      if (item is! Map) {
+        continue;
+      }
+      final map = item.cast<String, Object?>();
+      final userMap = (map['user'] as Map?)?.cast<String, Object?>();
+      final password = map['password'] as String?;
+      if (userMap == null || password == null) {
+        continue;
+      }
+
+      final user = appUserFromJson(userMap);
+      accounts[user.email.trim().toLowerCase()] = _StoredAccount(
+        user: user,
+        password: password,
+      );
+    }
+    return accounts;
+  }
+
+  static Future<void> _persistAccounts(
+    JsonPreferencesStore? store,
+    Map<String, _StoredAccount> accounts,
+  ) async {
+    if (store == null) {
+      return;
+    }
+
+    final payload = accounts.values.map((account) {
+      return <String, Object?>{
+        'user': appUserToJson(account.user),
+        'password': account.password,
+      };
+    }).toList();
+    await store.writeJson(_accountsStoreKey, payload);
+  }
+
+  static Future<String?> _loadCurrentUserEmail(
+    JsonPreferencesStore? store,
+  ) async {
+    final stored = await store?.readObject(_currentUserStoreKey);
+    final email = stored?['email'] as String?;
+    return email?.trim().toLowerCase();
   }
 }
 

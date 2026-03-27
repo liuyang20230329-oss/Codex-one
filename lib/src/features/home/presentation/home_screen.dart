@@ -40,9 +40,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.user.id != widget.user.id) {
+    if (_didUserContextChange(oldWidget.user, widget.user)) {
       widget.chatController.syncUser(widget.user);
     }
+  }
+
+  bool _didUserContextChange(AppUser previous, AppUser next) {
+    return previous.id != next.id ||
+        previous.name != next.name ||
+        previous.avatarKey != next.avatarKey ||
+        previous.verification.phoneStatus != next.verification.phoneStatus ||
+        previous.verification.identityStatus !=
+            next.verification.identityStatus ||
+        previous.verification.faceStatus != next.verification.faceStatus;
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import '../../../firebase_options.dart';
+import '../persistence/json_preferences_store.dart';
 import '../../features/auth/data/demo_auth_repository.dart';
 import '../../features/auth/data/firebase_auth_repository.dart';
 import '../../features/auth/domain/auth_repository.dart';
@@ -31,11 +32,12 @@ class AppBootstrapResult {
 
 class AppBootstrap {
   static Future<AppBootstrapResult> initialize() async {
+    final store = await JsonPreferencesStore.create();
     final options = DefaultFirebaseOptions.currentPlatform;
     if (!_hasRealFirebaseValues(options)) {
       return AppBootstrapResult(
-        repository: DemoAuthRepository.seeded(),
-        chatRepository: DemoChatRepository(),
+        repository: await DemoAuthRepository.seeded(store: store),
+        chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.demo,
         statusLabel: 'Demo auth mode',
         statusMessage:
@@ -53,8 +55,9 @@ class AppBootstrap {
       return AppBootstrapResult(
         repository: FirebaseAuthRepository(
           auth: FirebaseAuth.instance,
+          store: store,
         ),
-        chatRepository: DemoChatRepository(),
+        chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.firebase,
         statusLabel: 'Firebase auth active',
         statusMessage:
@@ -62,8 +65,8 @@ class AppBootstrap {
       );
     } catch (_) {
       return AppBootstrapResult(
-        repository: DemoAuthRepository.seeded(),
-        chatRepository: DemoChatRepository(),
+        repository: await DemoAuthRepository.seeded(store: store),
+        chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.demo,
         statusLabel: 'Demo auth mode',
         statusMessage:

@@ -1,13 +1,20 @@
+import 'package:codex_one/src/core/persistence/json_preferences_store.dart';
 import 'package:codex_one/src/features/auth/data/demo_auth_repository.dart';
 import 'package:codex_one/src/features/auth/domain/verification_status.dart';
 import 'package:codex_one/src/features/auth/presentation/auth_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Account verification flow', () {
     test('can verify phone with the demo code', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
       final controller = AuthController(
-        repository: DemoAuthRepository.seeded(),
+        repository: await DemoAuthRepository.seeded(
+          store: await JsonPreferencesStore.create(),
+        ),
       );
 
       await controller.signUp(
@@ -38,8 +45,11 @@ void main() {
     });
 
     test('requires identity verification before face verification', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
       final controller = AuthController(
-        repository: DemoAuthRepository.seeded(),
+        repository: await DemoAuthRepository.seeded(
+          store: await JsonPreferencesStore.create(),
+        ),
       );
 
       await controller.signIn(
@@ -61,8 +71,11 @@ void main() {
     });
 
     test('identity plus face verification completes the trust flow', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
       final controller = AuthController(
-        repository: DemoAuthRepository.seeded(),
+        repository: await DemoAuthRepository.seeded(
+          store: await JsonPreferencesStore.create(),
+        ),
       );
 
       await controller.signIn(
@@ -93,8 +106,11 @@ void main() {
     });
 
     test('changing the avatar resets face verification', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
       final controller = AuthController(
-        repository: DemoAuthRepository.seeded(),
+        repository: await DemoAuthRepository.seeded(
+          store: await JsonPreferencesStore.create(),
+        ),
       );
 
       await controller.signIn(
@@ -118,6 +134,36 @@ void main() {
         VerificationStatus.notStarted,
       );
       expect(controller.currentUser?.verification.faceMatchScore, isNull);
+    });
+
+    test('persists demo account progress across repository recreation', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = await JsonPreferencesStore.create();
+      final controller = AuthController(
+        repository: await DemoAuthRepository.seeded(store: store),
+      );
+
+      await controller.signUp(
+        name: 'Persistent User',
+        email: 'persist@example.com',
+        password: 'Password123!',
+      );
+      final session = await controller.requestPhoneVerification(
+        phoneNumber: '13800138000',
+      );
+      await controller.confirmPhoneVerification(code: session!.debugCode);
+
+      final restoredController = AuthController(
+        repository: await DemoAuthRepository.seeded(
+          store: await JsonPreferencesStore.create(),
+        ),
+      );
+
+      expect(restoredController.currentUser?.email, 'persist@example.com');
+      expect(
+        restoredController.currentUser?.verification.phoneStatus,
+        VerificationStatus.verified,
+      );
     });
   });
 }

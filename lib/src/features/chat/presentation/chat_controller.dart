@@ -18,6 +18,7 @@ class ChatController extends ChangeNotifier {
   List<ChatConversation> _conversations = const <ChatConversation>[];
   List<ChatMessage> _messages = const <ChatMessage>[];
   String? _selectedConversationId;
+  final Map<String, String> _drafts = <String, String>{};
 
   bool get isBusy => _isBusy;
   String? get errorMessage => _errorMessage;
@@ -35,9 +36,12 @@ class ChatController extends ChangeNotifier {
     }
     return null;
   }
+  String draftFor(String conversationId) => _drafts[conversationId] ?? '';
 
   Future<void> syncUser(AppUser user) async {
-    final needsReset = _currentUser?.id != user.id;
+    final previousUser = _currentUser;
+    final needsReset = previousUser?.id != user.id;
+    final selectedConversationId = _selectedConversationId;
     _currentUser = user;
     if (needsReset) {
       _selectedConversationId = null;
@@ -45,6 +49,9 @@ class ChatController extends ChangeNotifier {
     }
 
     await _refreshConversations();
+    if (!needsReset && selectedConversationId != null) {
+      await openConversation(selectedConversationId);
+    }
   }
 
   Future<void> openConversation(String conversationId) async {
@@ -78,6 +85,13 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateDraft({
+    required String conversationId,
+    required String value,
+  }) {
+    _drafts[conversationId] = value;
+  }
+
   Future<bool> sendMessage(String text) async {
     final user = _currentUser;
     final conversationId = _selectedConversationId;
@@ -86,6 +100,11 @@ class ChatController extends ChangeNotifier {
     }
     if (text.trim().isEmpty) {
       _errorMessage = 'Enter a message before sending.';
+      notifyListeners();
+      return false;
+    }
+    if (text.trim().length > 280) {
+      _errorMessage = 'Keep messages within 280 characters for now.';
       notifyListeners();
       return false;
     }
@@ -100,6 +119,7 @@ class ChatController extends ChangeNotifier {
         conversationId: conversationId,
         text: text,
       );
+      _drafts.remove(conversationId);
       _messages = await _repository.loadMessages(
         user: user,
         conversationId: conversationId,

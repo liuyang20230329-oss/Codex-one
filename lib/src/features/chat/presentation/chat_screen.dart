@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/domain/app_user.dart';
+import '../../../core/widgets/app_profile_avatar.dart';
 import '../domain/chat_conversation.dart';
 import 'chat_controller.dart';
 
@@ -20,6 +21,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _composerController = TextEditingController();
+  String? _lastConversationId;
 
   @override
   void dispose() {
@@ -37,6 +39,18 @@ class _ChatScreenState extends State<ChatScreen> {
     _composerController.clear();
   }
 
+  void _syncComposerWithConversation(String conversationId) {
+    if (_lastConversationId == conversationId) {
+      return;
+    }
+    _lastConversationId = conversationId;
+    final draft = widget.controller.draftFor(conversationId);
+    _composerController.value = TextEditingValue(
+      text: draft,
+      selection: TextSelection.collapsed(offset: draft.length),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -44,11 +58,13 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, _) {
         final selectedConversation = widget.controller.selectedConversation;
         if (selectedConversation == null) {
+          _lastConversationId = null;
           return _ConversationListView(
             controller: widget.controller,
             user: widget.user,
           );
         }
+        _syncComposerWithConversation(selectedConversation.id);
 
         return Column(
           children: <Widget>[
@@ -145,25 +161,78 @@ class _ChatScreenState extends State<ChatScreen> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                child: Row(
+                child: Column(
                   children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        controller: _composerController,
-                        minLines: 1,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                          hintText: 'Type your message',
-                          prefixIcon: Icon(Icons.chat_bubble_outline),
-                        ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: <Widget>[
+                          for (final suggestion in _quickRepliesFor(
+                            selectedConversation,
+                          )) ...<Widget>[
+                            ActionChip(
+                              label: Text(suggestion),
+                              onPressed: () {
+                                _composerController.value = TextEditingValue(
+                                  text: suggestion,
+                                  selection: TextSelection.collapsed(
+                                    offset: suggestion.length,
+                                  ),
+                                );
+                                widget.controller.updateDraft(
+                                  conversationId: selectedConversation.id,
+                                  value: suggestion,
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: widget.controller.isBusy ? null : _send,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Icon(Icons.send_rounded),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: TextField(
+                            controller: _composerController,
+                            minLines: 1,
+                            maxLines: 4,
+                            textInputAction: TextInputAction.send,
+                            onChanged: (value) {
+                              setState(() {});
+                              widget.controller.updateDraft(
+                                conversationId: selectedConversation.id,
+                                value: value,
+                              );
+                            },
+                            onSubmitted: (_) => _send(),
+                            maxLength: 280,
+                            decoration: InputDecoration(
+                              hintText: 'Type your message',
+                              prefixIcon:
+                                  const Icon(Icons.chat_bubble_outline),
+                              helperText:
+                                  '${_composerController.text.length}/280 characters',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: widget.controller.isBusy ? null : _send,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Icon(Icons.send_rounded),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Drafts stay with each conversation while the app remains open.',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                   ],
@@ -174,6 +243,29 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  List<String> _quickRepliesFor(ChatConversation conversation) {
+    switch (conversation.id) {
+      case 'concierge':
+        return const <String>[
+          'I just finished another verification step.',
+          'Show me what to test next.',
+          'I am ready to explore chats now.',
+        ];
+      case 'night-owls':
+        return const <String>[
+          'I am testing the onboarding flow tonight.',
+          'The account center is smoother now.',
+          'Next I want to try voice rooms.',
+        ];
+      default:
+        return const <String>[
+          'Hi, nice to meet you.',
+          'How is your testing going?',
+          'Want to keep chatting here later?',
+        ];
+    }
   }
 }
 
@@ -209,6 +301,23 @@ class _ConversationListView extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  AppProfileAvatar(
+                    user: user,
+                    radius: 18,
+                    showVerificationBadge: true,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${user.verification.verifiedCount}/3 trust steps completed. Your current account state now feeds directly into concierge updates and trust messaging.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Text(
                 'Unverified users can already chat. Later we can layer in exposure limits, trust rules, and moderation weights without changing this navigation.',
                 style: Theme.of(context).textTheme.bodyLarge,
