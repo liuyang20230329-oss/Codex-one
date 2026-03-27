@@ -23,6 +23,10 @@ class DemoAuthRepository implements AuthRepository {
   }
 
   final Map<String, _StoredAccount> _accounts;
+  AppUser? _currentUser;
+
+  @override
+  AppUser? get currentUser => _currentUser;
 
   @override
   Future<AppUser> signIn({
@@ -40,7 +44,8 @@ class DemoAuthRepository implements AuthRepository {
       throw const AuthException('The password is incorrect. Please try again.');
     }
 
-    return account.toUser();
+    _currentUser = account.toUser();
+    return _currentUser!;
   }
 
   @override
@@ -63,12 +68,14 @@ class DemoAuthRepository implements AuthRepository {
       password: password,
     );
     _accounts[normalizedEmail] = account;
-    return account.toUser();
+    _currentUser = account.toUser();
+    return _currentUser!;
   }
 
   @override
-  Future<void> signOut() {
-    return Future<void>.delayed(const Duration(milliseconds: 250));
+  Future<void> signOut() async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    _currentUser = null;
   }
 }
 

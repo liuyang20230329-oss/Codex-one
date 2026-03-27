@@ -8,10 +8,14 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.controller,
     required this.user,
+    required this.statusLabel,
+    required this.statusMessage,
   });
 
   final AuthController controller;
   final AppUser user;
+  final String statusLabel;
+  final String statusMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +61,11 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+            _StatusCard(
+              label: statusLabel,
+              message: statusMessage,
+            ),
+            const SizedBox(height: 20),
             const _FeatureCard(
               icon: Icons.chat_bubble_outline,
               title: 'Text chat',
@@ -97,6 +106,38 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.label,
+    required this.message,
+  });
+
+  final String label;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(message),
+        ],
       ),
     );
   }

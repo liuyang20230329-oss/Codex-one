@@ -2,8 +2,8 @@ name: codex_one
 description: Social mobile app starter scaffold for Codex One.
 publish_to: "none"
 
-# SemVer pre-release for the March 27, 2026 auth starter.
-version: 0.1.0-dev.1+20260327
+# SemVer pre-release for the March 27, 2026 Firebase auth starter.
+version: 0.2.0-dev.1+20260327
 
 environment:
   sdk: ^3.6.0
@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  firebase_auth: ^6.3.0
+  firebase_core: ^4.6.0
 
 dev_dependencies:
   flutter_test:

@@ -13,11 +13,15 @@ enum AuthStatus {
 class AuthController extends ChangeNotifier {
   AuthController({
     required AuthRepository repository,
-  }) : _repository = repository;
+  })  : _repository = repository,
+        _currentUser = repository.currentUser,
+        _status = repository.currentUser == null
+            ? AuthStatus.unauthenticated
+            : AuthStatus.authenticated;
 
   final AuthRepository _repository;
 
-  AuthStatus _status = AuthStatus.unauthenticated;
+  AuthStatus _status;
   AppUser? _currentUser;
   String? _errorMessage;
 

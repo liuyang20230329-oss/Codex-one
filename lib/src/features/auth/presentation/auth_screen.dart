@@ -13,9 +13,15 @@ class AuthScreen extends StatefulWidget {
   const AuthScreen({
     super.key,
     required this.controller,
+    required this.statusLabel,
+    required this.statusMessage,
+    required this.showDemoAccount,
   });
 
   final AuthController controller;
+  final String statusLabel;
+  final String statusMessage;
+  final bool showDemoAccount;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -79,11 +85,16 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    'This starter focuses on a reliable sign-in and sign-up flow first, then leaves room for chat, voice rooms, and video calls.',
+                                    'This starter now supports Firebase email and password auth, while still keeping a demo fallback for local testing.',
                                     style: theme.textTheme.bodyLarge,
                                   ),
                                 ],
                               ),
+                            ),
+                            const SizedBox(height: 20),
+                            _StatusCard(
+                              label: widget.statusLabel,
+                              message: widget.statusMessage,
                             ),
                             const SizedBox(height: 24),
                             SegmentedButton<AuthMode>(
@@ -108,8 +119,10 @@ class _AuthScreenState extends State<AuthScreen> {
                               _ErrorBanner(message: widget.controller.errorMessage!),
                               const SizedBox(height: 16),
                             ],
-                            const _DemoAccountCard(),
-                            const SizedBox(height: 24),
+                            if (widget.showDemoAccount) ...<Widget>[
+                              const _DemoAccountCard(),
+                              const SizedBox(height: 24),
+                            ],
                             if (_mode == AuthMode.signIn)
                               SignInForm(
                                 isBusy: widget.controller.isBusy,
@@ -142,6 +155,39 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.label,
+    required this.message,
+  });
+
+  final String label;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(message),
+        ],
       ),
     );
   }
