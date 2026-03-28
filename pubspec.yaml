@@ -2,8 +2,8 @@ name: codex_one
 description: Social mobile app starter scaffold for Codex One.
 publish_to: "none"
 
-# SemVer pre-release for the March 28, 2026 account center and four-tab refresh.
-version: 0.4.0-dev.1+20260328
+# SemVer pre-release for the March 28, 2026 Android package optimization refresh.
+version: 0.4.0-dev.2+2026032823
 
 environment:
   sdk: ^3.6.0
