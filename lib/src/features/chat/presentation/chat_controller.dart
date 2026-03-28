@@ -36,6 +36,7 @@ class ChatController extends ChangeNotifier {
     }
     return null;
   }
+
   String draftFor(String conversationId) => _drafts[conversationId] ?? '';
 
   Future<void> syncUser(AppUser user) async {
@@ -72,7 +73,7 @@ class ChatController extends ChangeNotifier {
       );
       _conversations = await _repository.loadConversations(user: user);
     } catch (_) {
-      _errorMessage = 'Unable to load this conversation right now.';
+      _errorMessage = '当前无法加载这个会话，请稍后再试。';
     }
 
     _isBusy = false;
@@ -99,12 +100,12 @@ class ChatController extends ChangeNotifier {
       return false;
     }
     if (text.trim().isEmpty) {
-      _errorMessage = 'Enter a message before sending.';
+      _errorMessage = '请输入消息内容后再发送。';
       notifyListeners();
       return false;
     }
     if (text.trim().length > 280) {
-      _errorMessage = 'Keep messages within 280 characters for now.';
+      _errorMessage = '当前单条消息最多支持 280 个字符。';
       notifyListeners();
       return false;
     }
@@ -129,7 +130,7 @@ class ChatController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (_) {
-      _errorMessage = 'Unable to send your message right now.';
+      _errorMessage = '当前无法发送消息，请稍后再试。';
       _isBusy = false;
       notifyListeners();
       return false;
@@ -153,7 +154,7 @@ class ChatController extends ChangeNotifier {
     try {
       _conversations = await _repository.loadConversations(user: user);
     } catch (_) {
-      _errorMessage = 'Unable to load chats right now.';
+      _errorMessage = '当前无法加载聊天列表，请稍后再试。';
     }
 
     _isBusy = false;

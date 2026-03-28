@@ -59,7 +59,7 @@ class _SignInFormState extends State<SignInForm> {
               keyboardType: TextInputType.emailAddress,
               autofillHints: const <String>[AutofillHints.email],
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: '邮箱',
                 prefixIcon: Icon(Icons.alternate_email),
               ),
               validator: AuthValidators.email,
@@ -70,7 +70,7 @@ class _SignInFormState extends State<SignInForm> {
               obscureText: true,
               autofillHints: const <String>[AutofillHints.password],
               decoration: const InputDecoration(
-                labelText: 'Password',
+                labelText: '密码',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               validator: AuthValidators.password,
@@ -86,13 +86,13 @@ class _SignInFormState extends State<SignInForm> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Sign in'),
+                    : const Text('登录'),
               ),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: widget.isBusy ? null : widget.onSwitchMode,
-              child: const Text('Need an account? Sign up'),
+              child: const Text('还没有账号？去注册'),
             ),
           ],
         ),

@@ -50,7 +50,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
       final user = credential.user ?? _auth.currentUser;
       if (user == null) {
-        throw const AuthException('Firebase did not return a user.');
+        throw const AuthException('Firebase 未返回用户信息。');
       }
 
       _pendingPhoneSession = null;
@@ -76,7 +76,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
       final user = credential.user ?? _auth.currentUser;
       if (user == null) {
-        throw const AuthException('Firebase did not return a user.');
+        throw const AuthException('Firebase 未返回用户信息。');
       }
 
       if (name.trim().isNotEmpty) {
@@ -136,13 +136,13 @@ class FirebaseAuthRepository implements AuthRepository {
   }) async {
     final session = _pendingPhoneSession;
     if (session == null || session.sessionId != sessionId) {
-      throw const AuthException('Start phone verification first.');
+      throw const AuthException('请先发起手机号认证。');
     }
     if (session.isExpired) {
-      throw const AuthException('This verification code has expired.');
+      throw const AuthException('验证码已过期。');
     }
     if (code.trim() != session.debugCode) {
-      throw const AuthException('The verification code is incorrect.');
+      throw const AuthException('验证码不正确。');
     }
 
     final user = _requireCurrentUser();
@@ -165,12 +165,12 @@ class FirebaseAuthRepository implements AuthRepository {
     final normalizedName = legalName.trim();
     final normalizedId = normalizeIdNumber(idNumber);
     if (normalizedName.length < 2) {
-      throw const AuthException('Please enter your legal name.');
+      throw const AuthException('请输入真实姓名。');
     }
 
     final idPattern = RegExp(r'^\d{17}[\dX]$');
     if (!idPattern.hasMatch(normalizedId)) {
-      throw const AuthException('Please enter a valid 18-digit ID number.');
+      throw const AuthException('请输入有效的18位身份证号。');
     }
 
     final user = _requireCurrentUser();
@@ -190,7 +190,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final user = _requireCurrentUser();
     if (!user.verification.canRunFaceVerification) {
       throw const AuthException(
-        'Complete identity verification before face verification.',
+        '请先完成身份证认证，再进行人脸认证。',
       );
     }
 
@@ -211,7 +211,7 @@ class FirebaseAuthRepository implements AuthRepository {
   AppUser _requireCurrentUser() {
     final user = currentUser;
     if (user == null) {
-      throw const AuthException('Please sign in to continue.');
+      throw const AuthException('请先登录后再继续。');
     }
     return user;
   }
@@ -273,7 +273,7 @@ class FirebaseAuthRepository implements AuthRepository {
   static String _fallbackDisplayName(User user) {
     final email = user.email;
     if (email == null || !email.contains('@')) {
-      return 'New user';
+      return '新用户';
     }
 
     return email.split('@').first;
@@ -282,26 +282,26 @@ class FirebaseAuthRepository implements AuthRepository {
   String _messageFor(FirebaseAuthException error) {
     switch (error.code) {
       case 'email-already-in-use':
-        return 'This email is already registered.';
+        return '该邮箱已被注册。';
       case 'invalid-email':
-        return 'Please enter a valid email address.';
+        return '请输入有效的邮箱地址。';
       case 'operation-not-allowed':
-        return 'Email and password sign-in is not enabled in Firebase yet.';
+        return 'Firebase 还没有开启邮箱密码登录。';
       case 'user-disabled':
-        return 'This account has been disabled.';
+        return '该账号已被停用。';
       case 'user-not-found':
-        return 'No account was found for this email.';
+        return '该邮箱未注册账号。';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'The password is incorrect. Please try again.';
+        return '密码不正确，请重试。';
       case 'weak-password':
-        return 'Please use a stronger password.';
+        return '请使用更强的密码。';
       case 'network-request-failed':
-        return 'A network error interrupted authentication. Please try again.';
+        return '网络异常导致认证中断，请稍后再试。';
       case 'too-many-requests':
-        return 'Too many attempts were made. Please wait and try again.';
+        return '尝试次数过多，请稍后再试。';
       default:
-        return error.message ?? 'Authentication failed. Please try again.';
+        return error.message ?? '认证失败，请稍后再试。';
     }
   }
 }

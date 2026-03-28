@@ -25,9 +25,7 @@ class DemoChatRepository implements ChatRepository {
     required AppUser user,
   }) async {
     final threads = await _ensureThreadsFor(user);
-    return threads.values
-        .map((thread) => thread.toConversation())
-        .toList()
+    return threads.values.map((thread) => thread.toConversation()).toList()
       ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
   }
 
@@ -88,7 +86,8 @@ class DemoChatRepository implements ChatRepository {
     await _persistThreads(user.id);
   }
 
-  Future<Map<String, _ConversationThread>> _ensureThreadsFor(AppUser user) async {
+  Future<Map<String, _ConversationThread>> _ensureThreadsFor(
+      AppUser user) async {
     final existing = _threadsByUserId[user.id];
     if (existing != null) {
       final changed = _syncUserChanges(user, existing);
@@ -106,7 +105,8 @@ class DemoChatRepository implements ChatRepository {
       threads = _seedThreads();
     } else {
       threads = _threadsFromJson(stored);
-      final snapshot = (stored['lastKnownUser'] as Map?)?.cast<String, Object?>();
+      final snapshot =
+          (stored['lastKnownUser'] as Map?)?.cast<String, Object?>();
       if (snapshot != null) {
         previousUser = appUserFromJson(snapshot);
       }
@@ -129,9 +129,9 @@ class DemoChatRepository implements ChatRepository {
     return <String, _ConversationThread>{
       'concierge': _ConversationThread(
         id: 'concierge',
-        title: 'Concierge',
-        subtitle: 'Starter onboarding thread',
-        categoryLabel: 'System',
+        title: '新手引导',
+        subtitle: '账号与聊天引导',
+        categoryLabel: '系统',
         unreadCount: 1,
         messages: <ChatMessage>[
           ChatMessage(
@@ -139,43 +139,40 @@ class DemoChatRepository implements ChatRepository {
             conversationId: 'concierge',
             senderId: 'system',
             senderName: 'Codex One',
-            text:
-                'Welcome aboard. Finish your account verification when you are ready, then begin your first chats here.',
+            text: '欢迎来到 Codex One。你可以先完成账号认证，也可以直接从这里开始第一段聊天。',
             createdAt: now.subtract(const Duration(minutes: 18)),
           ),
         ],
       ),
       'nora': _ConversationThread(
         id: 'nora',
-        title: 'Nora Chen',
-        subtitle: 'Nearby creative match',
-        categoryLabel: 'Direct',
+        title: '陈诺拉',
+        subtitle: '附近的创意匹配',
+        categoryLabel: '私聊',
         messages: <ChatMessage>[
           ChatMessage(
             id: 'seed-2',
             conversationId: 'nora',
             senderId: 'nora',
-            senderName: 'Nora Chen',
-            text:
-                'Hey, I am testing the new text chat flow too. Once your profile is ready, send your first hello here.',
+            senderName: '陈诺拉',
+            text: '嗨，我也在测试新的文字聊天流程。等你资料准备好之后，就可以先在这里打个招呼。',
             createdAt: now.subtract(const Duration(minutes: 9)),
           ),
         ],
       ),
       'night-owls': _ConversationThread(
         id: 'night-owls',
-        title: 'Night Owls Club',
-        subtitle: 'City social beta group',
-        categoryLabel: 'Group',
+        title: '夜猫子俱乐部',
+        subtitle: '城市社交内测群',
+        categoryLabel: '群聊',
         unreadCount: 2,
         messages: <ChatMessage>[
           ChatMessage(
             id: 'seed-3',
             conversationId: 'night-owls',
             senderId: 'host',
-            senderName: 'Group Host',
-            text:
-                'Tonight we are collecting feedback on onboarding, profile verification, and first-chat experience.',
+            senderName: '群主',
+            text: '今晚我们在收集关于新手引导、资料认证和首次聊天体验的反馈。',
             createdAt: now.subtract(const Duration(minutes: 4)),
           ),
         ],
@@ -201,11 +198,11 @@ class DemoChatRepository implements ChatRepository {
     var changed = false;
     final now = DateTime.now();
 
-    if (previousUser.name != user.name || previousUser.avatarKey != user.avatarKey) {
+    if (previousUser.name != user.name ||
+        previousUser.avatarKey != user.avatarKey) {
       final avatarLabel = avatarOptionFor(user.avatarKey).label;
       concierge.addSystemMessage(
-        text:
-            'Profile updated. You now appear as ${user.name} with the $avatarLabel avatar theme.',
+        text: '资料已更新。你现在显示为“${user.name}”，头像主题为“$avatarLabel”。',
         createdAt: now,
       );
       changed = true;
@@ -214,8 +211,7 @@ class DemoChatRepository implements ChatRepository {
     if (!previousUser.verification.phoneStatus.isVerified &&
         user.verification.phoneStatus.isVerified) {
       concierge.addSystemMessage(
-        text:
-            'Phone verification completed. Recovery and trust signals are now stronger.',
+        text: '手机号认证已完成，账号找回能力和信任分都会更高。',
         createdAt: now.add(const Duration(milliseconds: 1)),
       );
       changed = true;
@@ -224,8 +220,7 @@ class DemoChatRepository implements ChatRepository {
     if (!previousUser.verification.identityStatus.isVerified &&
         user.verification.identityStatus.isVerified) {
       concierge.addSystemMessage(
-        text:
-            'Identity verification completed. You can now continue to the face ownership check.',
+        text: '身份证认证已完成，你现在可以继续进行本人头像/人脸认证。',
         createdAt: now.add(const Duration(milliseconds: 2)),
       );
       changed = true;
@@ -234,8 +229,7 @@ class DemoChatRepository implements ChatRepository {
     if (!previousUser.verification.faceStatus.isVerified &&
         user.verification.faceStatus.isVerified) {
       concierge.addSystemMessage(
-        text:
-            'Face verification completed. Your verified-owner badge is now active.',
+        text: '本人头像认证已完成，你的“本人认证”标记已经生效。',
         createdAt: now.add(const Duration(milliseconds: 3)),
       );
       changed = true;
@@ -244,8 +238,7 @@ class DemoChatRepository implements ChatRepository {
     if (previousUser.verification.faceStatus.isVerified &&
         !user.verification.faceStatus.isVerified) {
       concierge.addSystemMessage(
-        text:
-            'Avatar changed, so face ownership verification needs to be completed again.',
+        text: '你刚刚更换了头像，因此需要重新完成本人头像认证。',
         createdAt: now.add(const Duration(milliseconds: 4)),
       );
       changed = true;
@@ -263,15 +256,14 @@ class DemoChatRepository implements ChatRepository {
     if (thread.id == 'concierge') {
       final verificationCount = user.verification.verifiedCount;
       final guidance = verificationCount < 3
-          ? 'You can keep chatting now, and later finish the remaining ${3 - verificationCount} verification step(s).'
-          : 'Your account trust loop is complete, so you can focus on matching and conversations now.';
+          ? '你现在依然可以继续聊天，后续再补完剩余 ${3 - verificationCount} 项认证即可。'
+          : '你的账号信任闭环已经完成，现在可以把重点放在匹配和聊天上了。';
       return ChatMessage(
         id: 'auto-${now.microsecondsSinceEpoch}',
         conversationId: thread.id,
         senderId: 'system',
         senderName: 'Codex One',
-        text:
-            'Noted: "$text". $guidance',
+        text: '已收到你的消息：“$text”。$guidance',
         createdAt: now,
       );
     }
@@ -281,9 +273,8 @@ class DemoChatRepository implements ChatRepository {
         id: 'auto-${now.microsecondsSinceEpoch}',
         conversationId: thread.id,
         senderId: 'nora',
-        senderName: 'Nora Chen',
-        text:
-            'Nice to meet you, ${user.name}. Your latest update came through clearly.',
+        senderName: '陈诺拉',
+        text: '很高兴认识你，${user.name}。我已经看到你刚刚发来的更新了。',
         createdAt: now,
       );
     }
@@ -293,9 +284,8 @@ class DemoChatRepository implements ChatRepository {
         id: 'auto-${now.microsecondsSinceEpoch}',
         conversationId: thread.id,
         senderId: 'host',
-        senderName: 'Group Host',
-        text:
-            'Thanks for the update. We are logging onboarding feedback from everyone in this room.',
+        senderName: '群主',
+        text: '收到，感谢你的反馈。我们正在整理这个群里所有人的新手体验意见。',
         createdAt: now,
       );
     }
@@ -404,7 +394,7 @@ class _ConversationThread {
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
-      categoryLabel: json['categoryLabel'] as String? ?? 'Direct',
+      categoryLabel: json['categoryLabel'] as String? ?? '私聊',
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       messages: messages,
     );

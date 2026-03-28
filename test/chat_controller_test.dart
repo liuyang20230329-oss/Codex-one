@@ -32,7 +32,8 @@ void main() {
       expect(controller.conversations.first.title, isNotEmpty);
     });
 
-    test('opens a conversation and sends a message with an auto reply', () async {
+    test('opens a conversation and sends a message with an auto reply',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final controller = ChatController(
         repository: DemoChatRepository(
@@ -54,7 +55,8 @@ void main() {
       expect(controller.selectedConversation?.id, conversation.id);
     });
 
-    test('persists chats and links account progress to concierge messages', () async {
+    test('persists chats and links account progress to concierge messages',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final firstStore = await JsonPreferencesStore.create();
       final firstRepository = DemoChatRepository(store: firstStore);
@@ -73,7 +75,7 @@ void main() {
       );
       expect(
         conciergeConversation.lastMessagePreview,
-        contains('Phone verification completed'),
+        contains('手机号认证已完成'),
       );
 
       final restoredRepository = DemoChatRepository(
@@ -87,7 +89,7 @@ void main() {
 
       expect(
         restoredConcierge.lastMessagePreview,
-        contains('Phone verification completed'),
+        contains('手机号认证已完成'),
       );
     });
   });

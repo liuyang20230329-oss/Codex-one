@@ -2,7 +2,7 @@
 
 Branch: `2026.3.27`
 
-Version: `0.3.1-dev.1+20260328`
+Version: `0.3.2-dev.1+20260328`
 
 This repository now contains a mobile social app starter with an expanded
 account system and a text chat MVP. The current scope covers sign-in, sign-up,

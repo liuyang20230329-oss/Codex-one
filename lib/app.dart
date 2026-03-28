@@ -44,7 +44,7 @@ class _CodexOneAppState extends State<CodexOneApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Codex One',
+      title: 'Codex One 社交',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: AuthGate(

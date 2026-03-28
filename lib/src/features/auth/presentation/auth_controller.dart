@@ -104,7 +104,7 @@ class AuthController extends ChangeNotifier {
   }) async {
     final session = _pendingPhoneSession;
     if (session == null) {
-      _errorMessage = 'Start phone verification first.';
+      _errorMessage = '请先发起手机号认证。';
       notifyListeners();
       return false;
     }
@@ -174,7 +174,7 @@ class AuthController extends ChangeNotifier {
       _currentUser = null;
       _pendingPhoneSession = null;
       _status = AuthStatus.unauthenticated;
-      _errorMessage = 'Authentication is temporarily unavailable.';
+      _errorMessage = '认证服务暂时不可用，请稍后再试。';
     }
 
     notifyListeners();
@@ -202,7 +202,7 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (_) {
-      _errorMessage = 'Authentication is temporarily unavailable.';
+      _errorMessage = '认证服务暂时不可用，请稍后再试。';
       _status = _currentUser == null
           ? AuthStatus.unauthenticated
           : AuthStatus.authenticated;
@@ -235,7 +235,7 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
       return null;
     } catch (_) {
-      _errorMessage = 'Authentication is temporarily unavailable.';
+      _errorMessage = '认证服务暂时不可用，请稍后再试。';
       _status = _currentUser == null
           ? AuthStatus.unauthenticated
           : AuthStatus.authenticated;

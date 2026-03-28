@@ -62,7 +62,7 @@ void main() {
       expect(success, isFalse);
       expect(
         controller.errorMessage,
-        'Complete identity verification before face verification.',
+        '请先完成身份证认证，再进行人脸认证。',
       );
       expect(
         controller.currentUser?.verification.faceStatus,
@@ -136,7 +136,8 @@ void main() {
       expect(controller.currentUser?.verification.faceMatchScore, isNull);
     });
 
-    test('persists demo account progress across repository recreation', () async {
+    test('persists demo account progress across repository recreation',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final store = await JsonPreferencesStore.create();
       final controller = AuthController(

@@ -61,21 +61,18 @@ class AccountVerification {
       faceStatus: faceStatus ?? this.faceStatus,
       phoneNumber: clearPhoneNumber ? null : (phoneNumber ?? this.phoneNumber),
       legalName: clearLegalName ? null : (legalName ?? this.legalName),
-      maskedIdNumber: clearMaskedIdNumber
-          ? null
-          : (maskedIdNumber ?? this.maskedIdNumber),
-      faceMatchScore: clearFaceMatchScore
-          ? null
-          : (faceMatchScore ?? this.faceMatchScore),
+      maskedIdNumber:
+          clearMaskedIdNumber ? null : (maskedIdNumber ?? this.maskedIdNumber),
+      faceMatchScore:
+          clearFaceMatchScore ? null : (faceMatchScore ?? this.faceMatchScore),
       phoneVerifiedAt: clearPhoneVerifiedAt
           ? null
           : (phoneVerifiedAt ?? this.phoneVerifiedAt),
       identityVerifiedAt: clearIdentityVerifiedAt
           ? null
           : (identityVerifiedAt ?? this.identityVerifiedAt),
-      faceVerifiedAt: clearFaceVerifiedAt
-          ? null
-          : (faceVerifiedAt ?? this.faceVerifiedAt),
+      faceVerifiedAt:
+          clearFaceVerifiedAt ? null : (faceVerifiedAt ?? this.faceVerifiedAt),
     );
   }
 }

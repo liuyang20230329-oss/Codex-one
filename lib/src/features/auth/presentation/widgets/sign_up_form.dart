@@ -65,7 +65,7 @@ class _SignUpFormState extends State<SignUpForm> {
               textInputAction: TextInputAction.next,
               autofillHints: const <String>[AutofillHints.name],
               decoration: const InputDecoration(
-                labelText: 'Display name',
+                labelText: '昵称',
                 prefixIcon: Icon(Icons.person_outline),
               ),
               validator: AuthValidators.name,
@@ -77,7 +77,7 @@ class _SignUpFormState extends State<SignUpForm> {
               textInputAction: TextInputAction.next,
               autofillHints: const <String>[AutofillHints.newUsername],
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: '邮箱',
                 prefixIcon: Icon(Icons.mail_outline),
               ),
               validator: AuthValidators.email,
@@ -89,9 +89,9 @@ class _SignUpFormState extends State<SignUpForm> {
               textInputAction: TextInputAction.next,
               autofillHints: const <String>[AutofillHints.newPassword],
               decoration: const InputDecoration(
-                labelText: 'Password',
+                labelText: '密码',
                 prefixIcon: Icon(Icons.lock_outline),
-                helperText: 'At least 8 characters',
+                helperText: '至少 8 位',
               ),
               validator: AuthValidators.password,
             ),
@@ -101,7 +101,7 @@ class _SignUpFormState extends State<SignUpForm> {
               obscureText: true,
               autofillHints: const <String>[AutofillHints.newPassword],
               decoration: const InputDecoration(
-                labelText: 'Confirm password',
+                labelText: '确认密码',
                 prefixIcon: Icon(Icons.verified_user_outlined),
               ),
               validator: (value) {
@@ -122,13 +122,13 @@ class _SignUpFormState extends State<SignUpForm> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Create account'),
+                    : const Text('创建账号'),
               ),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: widget.isBusy ? null : widget.onSwitchMode,
-              child: const Text('Already have an account? Sign in'),
+              child: const Text('已有账号？去登录'),
             ),
           ],
         ),

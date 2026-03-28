@@ -19,8 +19,8 @@ ChatMessage chatMessageFromJson(Map<String, Object?> json) {
     senderId: json['senderId'] as String? ?? '',
     senderName: json['senderName'] as String? ?? '',
     text: json['text'] as String? ?? '',
-    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-        DateTime.now(),
+    createdAt:
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
     deliveryStatus: json['deliveryStatus'] as String? ?? 'Delivered',
   );
 }

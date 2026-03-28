@@ -80,12 +80,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   Text(
-                                    'Connect through text, voice, and video',
+                                    '用文字、语音和视频建立连接',
                                     style: theme.textTheme.headlineMedium,
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    'This starter now supports Firebase email and password auth, while still keeping a demo fallback for local testing.',
+                                    '当前版本已经支持 Firebase 邮箱密码认证，同时保留本地演示模式，方便你直接测试完整流程。',
                                     style: theme.textTheme.bodyLarge,
                                   ),
                                 ],
@@ -102,11 +102,11 @@ class _AuthScreenState extends State<AuthScreen> {
                               segments: const <ButtonSegment<AuthMode>>[
                                 ButtonSegment<AuthMode>(
                                   value: AuthMode.signIn,
-                                  label: Text('Sign in'),
+                                  label: Text('登录'),
                                 ),
                                 ButtonSegment<AuthMode>(
                                   value: AuthMode.signUp,
-                                  label: Text('Sign up'),
+                                  label: Text('注册'),
                                 ),
                               ],
                               selected: <AuthMode>{_mode},
@@ -115,8 +115,10 @@ class _AuthScreenState extends State<AuthScreen> {
                               },
                             ),
                             const SizedBox(height: 20),
-                            if (widget.controller.errorMessage != null) ...<Widget>[
-                              _ErrorBanner(message: widget.controller.errorMessage!),
+                            if (widget.controller.errorMessage !=
+                                null) ...<Widget>[
+                              _ErrorBanner(
+                                  message: widget.controller.errorMessage!),
                               const SizedBox(height: 16),
                             ],
                             if (widget.showDemoAccount) ...<Widget>[
@@ -127,7 +129,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               SignInForm(
                                 isBusy: widget.controller.isBusy,
                                 onSubmit: widget.controller.signIn,
-                                onSwitchMode: () => _switchMode(AuthMode.signUp),
+                                onSwitchMode: () =>
+                                    _switchMode(AuthMode.signUp),
                               )
                             else
                               SignUpForm(
@@ -143,7 +146,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                     password: password,
                                   );
                                 },
-                                onSwitchMode: () => _switchMode(AuthMode.signIn),
+                                onSwitchMode: () =>
+                                    _switchMode(AuthMode.signIn),
                               ),
                           ],
                         );
@@ -240,11 +244,11 @@ class _DemoAccountCard extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('Demo account'),
+          Text('演示账号'),
           SizedBox(height: 8),
-          Text('Email: demo@codex.one'),
+          Text('邮箱：demo@codex.one'),
           SizedBox(height: 6),
-          Text('Password: Password123!'),
+          Text('密码：Password123!'),
         ],
       ),
     );

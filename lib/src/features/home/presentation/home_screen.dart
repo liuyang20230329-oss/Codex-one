@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
         user: widget.user,
       ),
     ];
-    final titles = <String>['Overview', 'Chats', 'Account'];
+    final titles = <String>['总览', '聊天', '账号'];
 
     return Scaffold(
       appBar: AppBar(
@@ -106,17 +106,17 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.space_dashboard_outlined),
             selectedIcon: Icon(Icons.space_dashboard_rounded),
-            label: 'Overview',
+            label: '总览',
           ),
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Chats',
+            label: '聊天',
           ),
           NavigationDestination(
             icon: Icon(Icons.manage_accounts_outlined),
             selectedIcon: Icon(Icons.manage_accounts),
-            label: 'Account',
+            label: '账号',
           ),
         ],
       ),
@@ -167,7 +167,7 @@ class _OverviewTab extends StatelessWidget {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      'Hello, ${user.name}',
+                      '你好，${user.name}',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                       ),
@@ -177,7 +177,7 @@ class _OverviewTab extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                'Your account system now includes phone, identity, and face ownership verification, while text chat remains available even before every step is finished.',
+                '当前账号体系已经接入手机号、身份证和本人头像/人脸认证；即使还没全部完成，你也可以先开始文字聊天。',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: Colors.white.withValues(alpha: 0.92),
                 ),
@@ -187,7 +187,7 @@ class _OverviewTab extends StatelessWidget {
                 children: <Widget>[
                   FilledButton.tonal(
                     onPressed: onOpenAccount,
-                    child: const Text('Open account center'),
+                    child: const Text('打开账号中心'),
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton(
@@ -196,7 +196,7 @@ class _OverviewTab extends StatelessWidget {
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white54),
                     ),
-                    child: const Text('Go to chats'),
+                    child: const Text('前往聊天'),
                   ),
                 ],
               ),
@@ -216,34 +216,31 @@ class _OverviewTab extends StatelessWidget {
         const SizedBox(height: 16),
         const _FeatureCard(
           icon: Icons.chat_bubble_outline,
-          title: 'Text chat MVP',
-          description:
-              'Conversation list, seeded threads, direct message detail, and message composer are ready for on-device testing.',
+          title: '文字聊天 MVP',
+          description: '会话列表、示例会话、私聊详情页和消息输入框都已经可用，适合直接上手机测试。',
         ),
         const SizedBox(height: 14),
         const _FeatureCard(
           icon: Icons.graphic_eq,
-          title: 'Voice rooms next',
-          description:
-              'Voice social flows stay planned as the next capability after the account system and chat MVP stabilize.',
+          title: '语音房下一步',
+          description: '等账号体系和文字聊天稳定后，下一阶段就会优先推进语音社交能力。',
         ),
         const SizedBox(height: 14),
         const _FeatureCard(
           icon: Icons.videocam_outlined,
-          title: 'Video trust hooks reserved',
-          description:
-              'Face ownership verification is already modeled now so later video entry checks can reuse it.',
+          title: '视频信任链已预留',
+          description: '本人头像/人脸认证已经建模完成，后续做视频准入校验时可以直接复用。',
         ),
         const SizedBox(height: 14),
         _InfoCard(
           icon: Icons.alternate_email,
-          title: 'Signed-in email',
+          title: '当前登录邮箱',
           value: user.email,
         ),
         const SizedBox(height: 14),
         _InfoCard(
           icon: Icons.badge_outlined,
-          title: 'User ID',
+          title: '用户 ID',
           value: user.id,
         ),
         if (verification.faceStatus != VerificationStatus.verified) ...<Widget>[
@@ -255,7 +252,7 @@ class _OverviewTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
             ),
             child: const Text(
-              'Your avatar can be updated now, but its verified-owner badge only appears after face verification completes.',
+              '你现在可以先更换头像，但只有完成人脸认证后，头像才会显示“本人认证”标记。',
             ),
           ),
         ],
@@ -288,29 +285,29 @@ class _VerificationSummaryCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Text(
-                'Verification progress',
+                '认证进度',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const Spacer(),
               TextButton(
                 onPressed: onOpenAccount,
-                child: const Text('Manage'),
+                child: const Text('去管理'),
               ),
             ],
           ),
           const SizedBox(height: 10),
           _VerificationRow(
-            title: 'Phone',
+            title: '手机号',
             status: verification.phoneStatus,
           ),
           const SizedBox(height: 10),
           _VerificationRow(
-            title: 'Identity',
+            title: '身份证',
             status: verification.identityStatus,
           ),
           const SizedBox(height: 10),
           _VerificationRow(
-            title: 'Face ownership',
+            title: '本人头像',
             status: verification.faceStatus,
           ),
         ],

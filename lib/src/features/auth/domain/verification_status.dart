@@ -9,13 +9,13 @@ extension VerificationStatusX on VerificationStatus {
   String get label {
     switch (this) {
       case VerificationStatus.notStarted:
-        return 'Not started';
+        return '未开始';
       case VerificationStatus.pending:
-        return 'Pending review';
+        return '审核中';
       case VerificationStatus.verified:
-        return 'Verified';
+        return '已认证';
       case VerificationStatus.rejected:
-        return 'Needs attention';
+        return '需处理';
     }
   }
 

@@ -47,7 +47,7 @@ void main() {
       expect(controller.currentUser, isNull);
       expect(
         controller.errorMessage,
-        'The password is incorrect. Please try again.',
+        '密码不正确，请重试。',
       );
     });
   });

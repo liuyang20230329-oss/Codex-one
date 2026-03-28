@@ -23,8 +23,7 @@ class AccountScreen extends StatelessWidget {
       builder: (context, _) {
         final currentUser = controller.currentUser ?? user;
         final verification = currentUser.verification;
-        final progressText =
-            '${verification.verifiedCount}/3 verification steps completed';
+        final progressText = '已完成 ${verification.verifiedCount}/3 项认证';
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -102,9 +101,9 @@ class AccountScreen extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             const _InfoNoticeCard(
-              title: 'Chat is available before verification completes',
+              title: '认证未完成前也可以先聊天',
               message:
-                  'Users can still use text chat before phone, identity, or face checks finish. Later we can add exposure and trust restrictions without redesigning this account center.',
+                  '即使手机号、身份证或本人头像认证还没完成，用户也可以先使用文字聊天。后续如果要增加曝光限制和信任规则，也不需要重新设计这个账号中心。',
             ),
             const SizedBox(height: 18),
             _ProfileSectionCard(
@@ -113,47 +112,37 @@ class AccountScreen extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _VerificationActionCard(
-              title: 'Phone verification',
-              subtitle: verification.phoneNumber ??
-                  'Bind a mobile number for recovery and trust scoring.',
-              description:
-                  'This starter uses a demo SMS code on screen. A real SMS provider can be attached later.',
+              title: '手机号认证',
+              subtitle: verification.phoneNumber ?? '绑定手机号，用于账号找回和信任分评估。',
+              description: '当前版本会在界面里直接显示演示验证码，后续可以接入真实短信服务。',
               status: verification.phoneStatus,
-              actionLabel: verification.phoneStatus.isVerified
-                  ? 'Reverify phone'
-                  : 'Verify phone',
+              actionLabel:
+                  verification.phoneStatus.isVerified ? '重新认证' : '立即认证',
               icon: Icons.smartphone_outlined,
               onPressed: () => _openPhoneVerification(context),
             ),
             const SizedBox(height: 14),
             _VerificationActionCard(
-              title: 'Identity verification',
+              title: '身份证认证',
               subtitle: verification.legalName == null
-                  ? 'Submit your legal name and ID number.'
-                  : '${verification.legalName} · ${verification.maskedIdNumber}',
-              description:
-                  'The UI and validation are ready now. Replace the demo approval with a compliant identity partner later.',
+                  ? '提交真实姓名和身份证号。'
+                  : '${verification.legalName} / ${verification.maskedIdNumber}',
+              description: '当前交互和校验已经准备好，后续可以把演示审核流程替换成合规的实名服务。',
               status: verification.identityStatus,
-              actionLabel: verification.identityStatus.isVerified
-                  ? 'Update identity'
-                  : 'Submit identity',
+              actionLabel:
+                  verification.identityStatus.isVerified ? '更新信息' : '提交认证',
               icon: Icons.badge_outlined,
               onPressed: () => _openIdentityVerification(context),
             ),
             const SizedBox(height: 14),
             _VerificationActionCard(
-              title: 'Face and avatar ownership',
+              title: '本人头像认证',
               subtitle: verification.faceMatchScore == null
-                  ? 'Confirm the profile avatar belongs to the account owner.'
-                  : 'Similarity ${(
-                        verification.faceMatchScore! * 100
-                      ).toStringAsFixed(1)}%',
-              description:
-                  'Changing the avatar will reset face verification, which keeps avatar trust tied to the current profile image.',
+                  ? '确认当前头像属于账号本人。'
+                  : '相似度 ${(verification.faceMatchScore! * 100).toStringAsFixed(1)}%',
+              description: '更换头像后会自动重置本人头像认证，确保“本人认证”始终和当前头像保持一致。',
               status: verification.faceStatus,
-              actionLabel: verification.faceStatus.isVerified
-                  ? 'Run again'
-                  : 'Start face check',
+              actionLabel: verification.faceStatus.isVerified ? '重新检测' : '开始认证',
               icon: Icons.verified_user_outlined,
               onPressed: verification.canRunFaceVerification
                   ? () => _openFaceVerification(context)
@@ -174,7 +163,7 @@ class AccountScreen extends StatelessWidget {
               icon: const Icon(Icons.logout),
               label: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text('Sign out'),
+                child: Text('退出登录'),
               ),
             ),
           ],
@@ -183,7 +172,8 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openProfileEditor(BuildContext context, AppUser currentUser) async {
+  Future<void> _openProfileEditor(
+      BuildContext context, AppUser currentUser) async {
     final draft = await showModalBottomSheet<_ProfileDraft>(
       context: context,
       isScrollControlled: true,
@@ -206,7 +196,7 @@ class AccountScreen extends StatelessWidget {
     _showResultSnackBar(
       context,
       success: success,
-      successMessage: 'Profile updated.',
+      successMessage: '资料已更新。',
     );
   }
 
@@ -225,7 +215,7 @@ class AccountScreen extends StatelessWidget {
     _showResultSnackBar(
       context,
       success: true,
-      successMessage: 'Phone verification completed.',
+      successMessage: '手机号认证已完成。',
     );
   }
 
@@ -244,7 +234,7 @@ class AccountScreen extends StatelessWidget {
     _showResultSnackBar(
       context,
       success: true,
-      successMessage: 'Identity information saved.',
+      successMessage: '身份证认证信息已保存。',
     );
   }
 
@@ -263,7 +253,7 @@ class AccountScreen extends StatelessWidget {
     _showResultSnackBar(
       context,
       success: true,
-      successMessage: 'Face verification completed.',
+      successMessage: '本人头像认证已完成。',
     );
   }
 
@@ -277,9 +267,7 @@ class AccountScreen extends StatelessWidget {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          success
-              ? successMessage
-              : controller.errorMessage ?? 'Something went wrong.',
+          success ? successMessage : controller.errorMessage ?? '操作失败，请稍后再试。',
         ),
       ),
     );
@@ -310,14 +298,14 @@ class _ProfileSectionCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Text(
-                'Profile basics',
+                '资料信息',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const Spacer(),
               TextButton.icon(
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit'),
+                label: const Text('编辑'),
               ),
             ],
           ),
@@ -334,7 +322,7 @@ class _ProfileSectionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(user.email),
                     const SizedBox(height: 4),
-                    Text('Avatar theme: ${avatarOption.label}'),
+                    Text('头像主题：${avatarOption.label}'),
                   ],
                 ),
               ),
@@ -540,25 +528,25 @@ class _ProfileEditorSheetState extends State<_ProfileEditorSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'Edit profile basics',
+              '编辑基础资料',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             const Text(
-              'Changing the avatar resets face verification so the verified badge always matches the current profile image.',
+              '更换头像后会重置本人头像认证，确保“本人认证”标记始终对应当前头像。',
             ),
             const SizedBox(height: 18),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Display name',
+                labelText: '昵称',
                 prefixIcon: Icon(Icons.person_outline),
               ),
               validator: AuthValidators.name,
             ),
             const SizedBox(height: 18),
             Text(
-              'Avatar theme',
+              '头像主题',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 10),
@@ -573,7 +561,7 @@ class _ProfileEditorSheetState extends State<_ProfileEditorSheet> {
                   avatar: CircleAvatar(
                     backgroundColor: option.background,
                     foregroundColor: option.foreground,
-                    child: const Text('A'),
+                    child: Text(option.label.characters.take(1).toString()),
                   ),
                   onSelected: (_) {
                     setState(() {
@@ -588,7 +576,7 @@ class _ProfileEditorSheetState extends State<_ProfileEditorSheet> {
               onPressed: _submit,
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text('Save profile'),
+                child: Text('保存资料'),
               ),
             ),
           ],
@@ -606,7 +594,8 @@ class _PhoneVerificationSheet extends StatefulWidget {
   final AuthController controller;
 
   @override
-  State<_PhoneVerificationSheet> createState() => _PhoneVerificationSheetState();
+  State<_PhoneVerificationSheet> createState() =>
+      _PhoneVerificationSheetState();
 }
 
 class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
@@ -640,12 +629,13 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     setState(() {
       _message = session == null
           ? widget.controller.errorMessage
-          : 'Demo code: ${session.debugCode}. Replace this with real SMS later.';
+          : '演示验证码：${session.debugCode}。后续可替换为真实短信服务。';
     });
   }
 
   Future<void> _submit() async {
-    final codeValidation = AuthValidators.verificationCode(_codeController.text);
+    final codeValidation =
+        AuthValidators.verificationCode(_codeController.text);
     if (codeValidation != null) {
       setState(() {
         _message = codeValidation;
@@ -683,33 +673,33 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Phone verification',
+            '手机号认证',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           const Text(
-            'This flow is wired for product testing right now. The code is shown on screen in demo mode so you can validate the full experience without an SMS provider.',
+            '当前这条流程已经可以用于产品测试。演示模式下验证码会直接显示在屏幕上，所以你不用接短信服务也能完整验证流程。',
           ),
           const SizedBox(height: 18),
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
-              labelText: 'Mobile number',
+              labelText: '手机号',
               prefixIcon: Icon(Icons.phone_android_outlined),
             ),
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: widget.controller.isBusy ? null : _sendCode,
-            child: const Text('Send verification code'),
+            child: const Text('发送验证码'),
           ),
           const SizedBox(height: 18),
           TextField(
             controller: _codeController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
-              labelText: 'Verification code',
+              labelText: '验证码',
               prefixIcon: Icon(Icons.password_outlined),
             ),
           ),
@@ -727,7 +717,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
             onPressed: widget.controller.isBusy ? null : _submit,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('Confirm phone'),
+              child: Text('确认手机号'),
             ),
           ),
         ],
@@ -748,7 +738,8 @@ class _IdentityVerificationSheet extends StatefulWidget {
       _IdentityVerificationSheetState();
 }
 
-class _IdentityVerificationSheetState extends State<_IdentityVerificationSheet> {
+class _IdentityVerificationSheetState
+    extends State<_IdentityVerificationSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _idController = TextEditingController();
@@ -794,18 +785,18 @@ class _IdentityVerificationSheetState extends State<_IdentityVerificationSheet> 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'Identity verification',
+              '身份证认证',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             const Text(
-              'The compliance-grade backend can replace this demo approval flow later. For now, the product journey, masking, validation, and status updates are already in place.',
+              '后续可以把这里替换成合规实名服务。当前版本已经把交互流程、脱敏展示、字段校验和状态更新都串好了。',
             ),
             const SizedBox(height: 18),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Legal name',
+                labelText: '真实姓名',
                 prefixIcon: Icon(Icons.person_pin_outlined),
               ),
               validator: AuthValidators.legalName,
@@ -815,7 +806,7 @@ class _IdentityVerificationSheetState extends State<_IdentityVerificationSheet> 
               controller: _idController,
               textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
-                labelText: 'ID number',
+                labelText: '身份证号',
                 prefixIcon: Icon(Icons.badge_outlined),
               ),
               validator: AuthValidators.idNumber,
@@ -825,7 +816,7 @@ class _IdentityVerificationSheetState extends State<_IdentityVerificationSheet> 
               onPressed: widget.controller.isBusy ? null : _submit,
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text('Submit identity information'),
+                child: Text('提交身份信息'),
               ),
             ),
           ],
@@ -876,12 +867,12 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Face and avatar ownership',
+            '本人头像认证',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           const Text(
-            'This starter completes the interaction and state transition for face verification. A real version can connect to camera capture, liveness detection, and a face matching provider.',
+            '当前版本已经把人脸认证的交互和状态流转跑通，后续可以接入相机采集、活体检测和人脸比对服务。',
           ),
           const SizedBox(height: 16),
           Container(
@@ -891,7 +882,7 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
               borderRadius: BorderRadius.circular(22),
             ),
             child: const Text(
-              'Rule: if the profile avatar changes later, face verification will reset automatically.',
+              '规则：如果后续更换头像，本人头像认证会自动重置。',
             ),
           ),
           const SizedBox(height: 16),
@@ -904,7 +895,7 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
             },
             contentPadding: EdgeInsets.zero,
             title: const Text(
-              'I confirm the current profile avatar belongs to the real account owner.',
+              '我确认当前头像属于账号本人。',
             ),
           ),
           const SizedBox(height: 16),
@@ -912,7 +903,7 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
             onPressed: widget.controller.isBusy || !_confirmed ? null : _submit,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('Run face verification'),
+              child: Text('开始人脸认证'),
             ),
           ),
         ],

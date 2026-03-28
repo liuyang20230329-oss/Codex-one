@@ -39,9 +39,9 @@ class AppBootstrap {
         repository: await DemoAuthRepository.seeded(store: store),
         chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.demo,
-        statusLabel: 'Demo auth mode',
+        statusLabel: '演示认证模式',
         statusMessage:
-            'Firebase is not configured yet. Replace lib/firebase_options.dart or run flutterfire configure to enable real email and password sign-in.',
+            '当前还没有配置 Firebase。你可以先使用演示模式测试流程；后续替换 lib/firebase_options.dart 或执行 flutterfire configure 后，就能启用真实的邮箱密码登录。',
       );
     }
 
@@ -59,18 +59,17 @@ class AppBootstrap {
         ),
         chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.firebase,
-        statusLabel: 'Firebase auth active',
-        statusMessage:
-            'Email and password sign-in is connected to Firebase Authentication.',
+        statusLabel: 'Firebase 认证已启用',
+        statusMessage: '当前邮箱密码登录已经连接到 Firebase Authentication。',
       );
     } catch (_) {
       return AppBootstrapResult(
         repository: await DemoAuthRepository.seeded(store: store),
         chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.demo,
-        statusLabel: 'Demo auth mode',
+        statusLabel: '演示认证模式',
         statusMessage:
-            'Firebase initialization failed, so the app fell back to demo auth. Check your Firebase options and rerun flutterfire configure.',
+            'Firebase 初始化失败，应用已自动回退到演示模式。请检查 Firebase 配置后重新执行 flutterfire configure。',
       );
     }
   }

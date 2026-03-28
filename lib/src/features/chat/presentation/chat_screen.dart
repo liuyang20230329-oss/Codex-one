@@ -102,16 +102,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   final message = widget.controller.messages[index];
                   final isMine = message.senderId == widget.user.id;
                   return Align(
-                    alignment: isMine
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
+                    alignment:
+                        isMine ? Alignment.centerRight : Alignment.centerLeft,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: isMine
-                              ? const Color(0xFF0F766E)
-                              : Colors.white,
+                          color:
+                              isMine ? const Color(0xFF0F766E) : Colors.white,
                           borderRadius: BorderRadius.circular(22),
                         ),
                         child: Padding(
@@ -120,7 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                isMine ? 'You' : message.senderName,
+                                isMine ? '我' : message.senderName,
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -209,11 +207,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             onSubmitted: (_) => _send(),
                             maxLength: 280,
                             decoration: InputDecoration(
-                              hintText: 'Type your message',
-                              prefixIcon:
-                                  const Icon(Icons.chat_bubble_outline),
+                              hintText: '输入消息',
+                              prefixIcon: const Icon(Icons.chat_bubble_outline),
                               helperText:
-                                  '${_composerController.text.length}/280 characters',
+                                  '${_composerController.text.length}/280 字',
                             ),
                           ),
                         ),
@@ -231,7 +228,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Drafts stay with each conversation while the app remains open.',
+                        '草稿会按会话暂存，在 App 打开期间不会丢失。',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -249,21 +246,21 @@ class _ChatScreenState extends State<ChatScreen> {
     switch (conversation.id) {
       case 'concierge':
         return const <String>[
-          'I just finished another verification step.',
-          'Show me what to test next.',
-          'I am ready to explore chats now.',
+          '我刚完成了一项新的认证。',
+          '告诉我下一步该测什么。',
+          '我现在可以开始体验聊天了。',
         ];
       case 'night-owls':
         return const <String>[
-          'I am testing the onboarding flow tonight.',
-          'The account center is smoother now.',
-          'Next I want to try voice rooms.',
+          '我今晚正在测试新手引导流程。',
+          '现在账号中心顺畅多了。',
+          '下一步我想试试语音房。',
         ];
       default:
         return const <String>[
-          'Hi, nice to meet you.',
-          'How is your testing going?',
-          'Want to keep chatting here later?',
+          '你好，很高兴认识你。',
+          '你那边测试得怎么样？',
+          '晚点我们继续在这里聊吧？',
         ];
     }
   }
@@ -297,7 +294,7 @@ class _ConversationListView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Text chat MVP',
+                '文字聊天 MVP',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
@@ -311,7 +308,7 @@ class _ConversationListView extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${user.verification.verifiedCount}/3 trust steps completed. Your current account state now feeds directly into concierge updates and trust messaging.',
+                      '已完成 ${user.verification.verifiedCount}/3 项信任认证，你当前的账号状态会直接同步到引导消息和信任提示中。',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -319,7 +316,7 @@ class _ConversationListView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Unverified users can already chat. Later we can layer in exposure limits, trust rules, and moderation weights without changing this navigation.',
+                '即使暂未完成认证也可以先聊天，后续我们可以在不改导航结构的前提下继续叠加曝光限制、信任规则和风控权重。',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ],

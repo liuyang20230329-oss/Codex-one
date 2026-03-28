@@ -20,31 +20,31 @@ class AvatarOptionData {
 const List<AvatarOptionData> avatarOptions = <AvatarOptionData>[
   AvatarOptionData(
     key: 'aurora',
-    label: 'Aurora',
+    label: '晨曦',
     background: Color(0xFF0F766E),
     foreground: Colors.white,
   ),
   AvatarOptionData(
     key: 'sunset',
-    label: 'Sunset',
+    label: '日落',
     background: Color(0xFFF97316),
     foreground: Colors.white,
   ),
   AvatarOptionData(
     key: 'lagoon',
-    label: 'Lagoon',
+    label: '海湾',
     background: Color(0xFF0369A1),
     foreground: Colors.white,
   ),
   AvatarOptionData(
     key: 'ember',
-    label: 'Ember',
+    label: '余烬',
     background: Color(0xFFBE123C),
     foreground: Colors.white,
   ),
   AvatarOptionData(
     key: 'graphite',
-    label: 'Graphite',
+    label: '石墨',
     background: Color(0xFF334155),
     foreground: Colors.white,
   ),
@@ -131,7 +131,7 @@ String _initialsForName(String name) {
       .where((part) => part.isNotEmpty)
       .toList();
   if (parts.isEmpty) {
-    return 'U';
+    return '用';
   }
   if (parts.length == 1) {
     return parts.first.characters.take(1).toString().toUpperCase();

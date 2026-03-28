@@ -29,7 +29,7 @@ class DemoAuthRepository implements AuthRepository {
       accounts['demo@codex.one'] = _StoredAccount(
         user: buildAccountUser(
           id: 'demo-user',
-          name: 'Codex Demo',
+          name: '演示用户',
           email: 'demo@codex.one',
           avatarKey: 'aurora',
         ),
@@ -39,9 +39,8 @@ class DemoAuthRepository implements AuthRepository {
     }
 
     final currentUserEmail = await _loadCurrentUserEmail(store);
-    final currentUser = currentUserEmail == null
-        ? null
-        : accounts[currentUserEmail]?.user;
+    final currentUser =
+        currentUserEmail == null ? null : accounts[currentUserEmail]?.user;
 
     return DemoAuthRepository._(
       accounts: accounts,
@@ -68,10 +67,10 @@ class DemoAuthRepository implements AuthRepository {
     final normalizedEmail = email.trim().toLowerCase();
     final account = _accounts[normalizedEmail];
     if (account == null) {
-      throw const AuthException('No account was found for this email.');
+      throw const AuthException('该邮箱未注册账号。');
     }
     if (account.password != password) {
-      throw const AuthException('The password is incorrect. Please try again.');
+      throw const AuthException('密码不正确，请重试。');
     }
 
     _pendingPhoneSession = null;
@@ -90,7 +89,7 @@ class DemoAuthRepository implements AuthRepository {
 
     final normalizedEmail = email.trim().toLowerCase();
     if (_accounts.containsKey(normalizedEmail)) {
-      throw const AuthException('This email is already registered.');
+      throw const AuthException('该邮箱已被注册。');
     }
 
     final account = _StoredAccount(
@@ -157,13 +156,13 @@ class DemoAuthRepository implements AuthRepository {
     await Future<void>.delayed(const Duration(milliseconds: 360));
     final session = _pendingPhoneSession;
     if (session == null || session.sessionId != sessionId) {
-      throw const AuthException('Start phone verification first.');
+      throw const AuthException('请先发起手机号认证。');
     }
     if (session.isExpired) {
-      throw const AuthException('This verification code has expired.');
+      throw const AuthException('验证码已过期。');
     }
     if (code.trim() != session.debugCode) {
-      throw const AuthException('The verification code is incorrect.');
+      throw const AuthException('验证码不正确。');
     }
 
     final user = _requireSignedInUser();
@@ -189,11 +188,11 @@ class DemoAuthRepository implements AuthRepository {
     final normalizedName = legalName.trim();
     final normalizedId = normalizeIdNumber(idNumber);
     if (normalizedName.length < 2) {
-      throw const AuthException('Please enter your legal name.');
+      throw const AuthException('请输入真实姓名。');
     }
     final idPattern = RegExp(r'^\d{17}[\dX]$');
     if (!idPattern.hasMatch(normalizedId)) {
-      throw const AuthException('Please enter a valid 18-digit ID number.');
+      throw const AuthException('请输入有效的18位身份证号。');
     }
 
     final user = _requireSignedInUser();
@@ -215,7 +214,7 @@ class DemoAuthRepository implements AuthRepository {
     final user = _requireSignedInUser();
     if (!user.verification.canRunFaceVerification) {
       throw const AuthException(
-        'Complete identity verification before face verification.',
+        '请先完成身份证认证，再进行人脸认证。',
       );
     }
 
@@ -232,7 +231,7 @@ class DemoAuthRepository implements AuthRepository {
   AppUser _requireSignedInUser() {
     final user = _currentUser;
     if (user == null) {
-      throw const AuthException('Please sign in to continue.');
+      throw const AuthException('请先登录后再继续。');
     }
     return user;
   }
@@ -241,7 +240,7 @@ class DemoAuthRepository implements AuthRepository {
     final key = user.email.trim().toLowerCase();
     final account = _accounts[key];
     if (account == null) {
-      throw const AuthException('This account could not be found.');
+      throw const AuthException('未找到对应账号。');
     }
 
     _accounts[key] = account.copyWith(user: user);
