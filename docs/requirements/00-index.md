@@ -12,8 +12,14 @@
 
 1. 先看 [01-module-map.md](/D:/Codex/docs/requirements/01-module-map.md)
 2. 再补 [02-global-rules.md](/D:/Codex/docs/requirements/02-global-rules.md)
-3. 然后按模块分别补文档
-4. 最后按 [99-task-handoff-template.md](/D:/Codex/docs/requirements/99-task-handoff-template.md) 给我拆任务
+3. 再补品牌和后台模板
+4. 然后按模块分别补文档
+5. 最后按 [99-task-handoff-template.md](/D:/Codex/docs/requirements/99-task-handoff-template.md) 给我拆任务
+
+## 补充文档
+
+- [03-brand-and-app-identity.md](/D:/Codex/docs/requirements/03-brand-and-app-identity.md)
+- [04-admin-backend-template.md](/D:/Codex/docs/requirements/04-admin-backend-template.md)
 
 ## 模块文档
 
