@@ -1,6 +1,8 @@
 import '../domain/account_verification.dart';
 import '../domain/app_user.dart';
+import '../domain/profile_media_work.dart';
 import '../domain/phone_verification_session.dart';
+import '../domain/user_gender.dart';
 import '../domain/verification_status.dart';
 
 const String demoSmsCode = '246810';
@@ -18,6 +20,14 @@ AppUser buildAccountUser({
   required String name,
   required String email,
   String? avatarKey,
+  UserGender gender = UserGender.undisclosed,
+  int? birthYear,
+  int? birthMonth,
+  String city = '未设置地区',
+  String signature = '这个人很酷，还没有留下签名。',
+  String introVideoTitle = '还没有上传视频介绍',
+  String introVideoSummary = '后续可以用一段视频介绍自己，让更多人更快认识你。',
+  List<ProfileMediaWork> works = const <ProfileMediaWork>[],
   AccountVerification verification = const AccountVerification(),
 }) {
   return AppUser(
@@ -25,6 +35,14 @@ AppUser buildAccountUser({
     name: name.trim(),
     email: email.trim().toLowerCase(),
     avatarKey: avatarKey ?? defaultAvatarKeyFor(email),
+    gender: gender,
+    birthYear: birthYear,
+    birthMonth: birthMonth,
+    city: city,
+    signature: signature,
+    introVideoTitle: introVideoTitle,
+    introVideoSummary: introVideoSummary,
+    works: works,
     verification: verification,
   );
 }

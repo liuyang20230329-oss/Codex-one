@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
+import '../domain/profile_media_work.dart';
 import '../domain/phone_verification_session.dart';
+import '../domain/user_gender.dart';
 
 enum AuthStatus {
   unauthenticated,
@@ -72,13 +74,29 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> updateProfile({
-    required String name,
-    required String avatarKey,
+    String? name,
+    String? avatarKey,
+    UserGender? gender,
+    int? birthYear,
+    int? birthMonth,
+    String? city,
+    String? signature,
+    String? introVideoTitle,
+    String? introVideoSummary,
+    List<ProfileMediaWork>? works,
   }) async {
     return _runAuthenticatedMutation(
       action: () => _repository.updateProfile(
         name: name,
         avatarKey: avatarKey,
+        gender: gender,
+        birthYear: birthYear,
+        birthMonth: birthMonth,
+        city: city,
+        signature: signature,
+        introVideoTitle: introVideoTitle,
+        introVideoSummary: introVideoSummary,
+        works: works,
       ),
       onSuccess: (user) {
         _currentUser = user;

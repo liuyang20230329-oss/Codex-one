@@ -6,8 +6,10 @@ import 'account_json_codec.dart';
 import '../domain/account_verification.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
+import '../domain/profile_media_work.dart';
 import '../domain/auth_repository.dart';
 import '../domain/phone_verification_session.dart';
+import '../domain/user_gender.dart';
 import '../domain/verification_status.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
@@ -95,16 +97,28 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> updateProfile({
-    required String name,
-    required String avatarKey,
+    String? name,
+    String? avatarKey,
+    UserGender? gender,
+    int? birthYear,
+    int? birthMonth,
+    String? city,
+    String? signature,
+    String? introVideoTitle,
+    String? introVideoSummary,
+    List<ProfileMediaWork>? works,
   }) async {
     final user = _requireCurrentUser();
-    if (_auth.currentUser != null && name.trim().isNotEmpty) {
-      await _auth.currentUser!.updateDisplayName(name.trim());
+    final trimmedName = name?.trim();
+    if (_auth.currentUser != null &&
+        trimmedName != null &&
+        trimmedName.isNotEmpty) {
+      await _auth.currentUser!.updateDisplayName(trimmedName);
       await _auth.currentUser!.reload();
     }
 
-    final verification = user.avatarKey == avatarKey
+    final nextAvatarKey = avatarKey ?? user.avatarKey;
+    final verification = user.avatarKey == nextAvatarKey
         ? user.verification
         : user.verification.copyWith(
             faceStatus: VerificationStatus.notStarted,
@@ -112,8 +126,23 @@ class FirebaseAuthRepository implements AuthRepository {
             clearFaceVerifiedAt: true,
           );
     _currentUser = user.copyWith(
-      name: name.trim(),
-      avatarKey: avatarKey,
+      name:
+          trimmedName == null || trimmedName.isEmpty ? user.name : trimmedName,
+      avatarKey: nextAvatarKey,
+      gender: gender,
+      birthYear: birthYear,
+      birthMonth: birthMonth,
+      city: city?.trim().isNotEmpty == true ? city!.trim() : user.city,
+      signature: signature?.trim().isNotEmpty == true
+          ? signature!.trim()
+          : user.signature,
+      introVideoTitle: introVideoTitle?.trim().isNotEmpty == true
+          ? introVideoTitle!.trim()
+          : user.introVideoTitle,
+      introVideoSummary: introVideoSummary?.trim().isNotEmpty == true
+          ? introVideoSummary!.trim()
+          : user.introVideoSummary,
+      works: works,
       verification: verification,
     );
     await _persistLocalState();
@@ -232,6 +261,14 @@ class FirebaseAuthRepository implements AuthRepository {
     return user.copyWith(
       name: restored.name.isEmpty ? user.name : restored.name,
       avatarKey: restored.avatarKey,
+      gender: restored.gender,
+      birthYear: restored.birthYear,
+      birthMonth: restored.birthMonth,
+      city: restored.city,
+      signature: restored.signature,
+      introVideoTitle: restored.introVideoTitle,
+      introVideoSummary: restored.introVideoSummary,
+      works: restored.works,
       verification: restored.verification,
     );
   }
@@ -264,6 +301,17 @@ class FirebaseAuthRepository implements AuthRepository {
       avatarKey: previousMatches
           ? previousUser.avatarKey
           : defaultAvatarKeyFor(user.email ?? user.uid),
+      gender: previousMatches ? previousUser.gender : UserGender.undisclosed,
+      birthYear: previousMatches ? previousUser.birthYear : null,
+      birthMonth: previousMatches ? previousUser.birthMonth : null,
+      city: previousMatches ? previousUser.city : '未设置地区',
+      signature: previousMatches ? previousUser.signature : '这个人很酷，还没有留下签名。',
+      introVideoTitle:
+          previousMatches ? previousUser.introVideoTitle : '还没有上传视频介绍',
+      introVideoSummary: previousMatches
+          ? previousUser.introVideoSummary
+          : '后续可以用一段视频介绍自己，让更多人更快认识你。',
+      works: previousMatches ? previousUser.works : const <ProfileMediaWork>[],
       verification: previousMatches
           ? previousUser.verification
           : const AccountVerification(),

@@ -3,6 +3,7 @@ import 'package:codex_one/src/features/auth/domain/account_verification.dart';
 import 'package:codex_one/src/features/auth/domain/app_user.dart';
 import 'package:codex_one/src/features/auth/domain/verification_status.dart';
 import 'package:codex_one/src/features/chat/data/demo_chat_repository.dart';
+import 'package:codex_one/src/features/chat/domain/chat_inbox_segment.dart';
 import 'package:codex_one/src/features/chat/presentation/chat_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,7 +29,24 @@ void main() {
 
       await controller.syncUser(user);
 
-      expect(controller.conversations.length, 3);
+      expect(controller.conversations.length, 5);
+      expect(
+        controller.conversationCountForSegment(ChatInboxSegment.friends),
+        1,
+      );
+      expect(
+        controller.conversationCountForSegment(ChatInboxSegment.hot),
+        1,
+      );
+      expect(
+        controller.conversationCountForSegment(ChatInboxSegment.followers),
+        1,
+      );
+      expect(
+        controller.conversationCountForSegment(ChatInboxSegment.following),
+        1,
+      );
+      expect(controller.totalUnreadCount, 4);
       expect(controller.conversations.first.title, isNotEmpty);
     });
 

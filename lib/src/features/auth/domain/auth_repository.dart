@@ -1,5 +1,7 @@
 import 'app_user.dart';
+import 'profile_media_work.dart';
 import 'phone_verification_session.dart';
+import 'user_gender.dart';
 
 abstract class AuthRepository {
   AppUser? get currentUser;
@@ -16,8 +18,16 @@ abstract class AuthRepository {
   });
 
   Future<AppUser> updateProfile({
-    required String name,
-    required String avatarKey,
+    String? name,
+    String? avatarKey,
+    UserGender? gender,
+    int? birthYear,
+    int? birthMonth,
+    String? city,
+    String? signature,
+    String? introVideoTitle,
+    String? introVideoSummary,
+    List<ProfileMediaWork>? works,
   });
 
   Future<PhoneVerificationSession> requestPhoneVerification({

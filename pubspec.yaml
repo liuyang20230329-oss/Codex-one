@@ -2,8 +2,8 @@ name: codex_one
 description: Social mobile app starter scaffold for Codex One.
 publish_to: "none"
 
-# SemVer pre-release for the March 28, 2026 Chinese UI localization build.
-version: 0.3.2-dev.1+20260328
+# SemVer pre-release for the March 28, 2026 account center and four-tab refresh.
+version: 0.4.0-dev.1+20260328
 
 environment:
   sdk: ^3.6.0

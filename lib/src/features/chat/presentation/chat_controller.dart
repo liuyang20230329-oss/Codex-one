@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../auth/domain/app_user.dart';
+import '../domain/chat_inbox_segment.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import '../domain/chat_repository.dart';
@@ -24,6 +25,8 @@ class ChatController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<ChatConversation> get conversations => _conversations;
   List<ChatMessage> get messages => _messages;
+  int get totalUnreadCount =>
+      _conversations.fold(0, (sum, item) => sum + item.unreadCount);
   ChatConversation? get selectedConversation {
     final id = _selectedConversationId;
     if (id == null) {
@@ -38,6 +41,15 @@ class ChatController extends ChangeNotifier {
   }
 
   String draftFor(String conversationId) => _drafts[conversationId] ?? '';
+  int conversationCountForSegment(ChatInboxSegment segment) {
+    return _conversations.where((item) => item.segment == segment).length;
+  }
+
+  int unreadCountForSegment(ChatInboxSegment segment) {
+    return _conversations
+        .where((item) => item.segment == segment)
+        .fold(0, (sum, item) => sum + item.unreadCount);
+  }
 
   Future<void> syncUser(AppUser user) async {
     final previousUser = _currentUser;

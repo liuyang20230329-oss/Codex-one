@@ -3,6 +3,7 @@ import '../../auth/data/account_json_codec.dart';
 import '../../auth/domain/app_user.dart';
 import '../../auth/domain/verification_status.dart';
 import '../../../core/widgets/app_profile_avatar.dart';
+import '../domain/chat_inbox_segment.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import '../domain/chat_repository.dart';
@@ -132,6 +133,7 @@ class DemoChatRepository implements ChatRepository {
         title: '新手引导',
         subtitle: '账号与聊天引导',
         categoryLabel: '系统',
+        segment: ChatInboxSegment.system,
         unreadCount: 1,
         messages: <ChatMessage>[
           ChatMessage(
@@ -149,6 +151,7 @@ class DemoChatRepository implements ChatRepository {
         title: '陈诺拉',
         subtitle: '附近的创意匹配',
         categoryLabel: '私聊',
+        segment: ChatInboxSegment.friends,
         messages: <ChatMessage>[
           ChatMessage(
             id: 'seed-2',
@@ -165,6 +168,7 @@ class DemoChatRepository implements ChatRepository {
         title: '夜猫子俱乐部',
         subtitle: '城市社交内测群',
         categoryLabel: '群聊',
+        segment: ChatInboxSegment.hot,
         unreadCount: 2,
         messages: <ChatMessage>[
           ChatMessage(
@@ -174,6 +178,41 @@ class DemoChatRepository implements ChatRepository {
             senderName: '群主',
             text: '今晚我们在收集关于新手引导、资料认证和首次聊天体验的反馈。',
             createdAt: now.subtract(const Duration(minutes: 4)),
+          ),
+        ],
+      ),
+      'peach': _ConversationThread(
+        id: 'peach',
+        title: '桃桃',
+        subtitle: '刚刚关注了你',
+        categoryLabel: '新关注',
+        segment: ChatInboxSegment.followers,
+        unreadCount: 1,
+        messages: <ChatMessage>[
+          ChatMessage(
+            id: 'seed-4',
+            conversationId: 'peach',
+            senderId: 'peach',
+            senderName: '桃桃',
+            text: '你好呀，我刚关注了你，看到你的语音作品很有氛围。',
+            createdAt: now.subtract(const Duration(minutes: 3)),
+          ),
+        ],
+      ),
+      'river': _ConversationThread(
+        id: 'river',
+        title: '小川',
+        subtitle: '你关注的摄影玩家',
+        categoryLabel: '已关注',
+        segment: ChatInboxSegment.following,
+        messages: <ChatMessage>[
+          ChatMessage(
+            id: 'seed-5',
+            conversationId: 'river',
+            senderId: 'river',
+            senderName: '小川',
+            text: '我今晚会更新一组新照片，晚点来看看。',
+            createdAt: now.subtract(const Duration(minutes: 2)),
           ),
         ],
       ),
@@ -199,10 +238,17 @@ class DemoChatRepository implements ChatRepository {
     final now = DateTime.now();
 
     if (previousUser.name != user.name ||
-        previousUser.avatarKey != user.avatarKey) {
+        previousUser.avatarKey != user.avatarKey ||
+        previousUser.signature != user.signature ||
+        previousUser.city != user.city ||
+        previousUser.gender != user.gender ||
+        previousUser.birthYear != user.birthYear ||
+        previousUser.birthMonth != user.birthMonth ||
+        previousUser.introVideoTitle != user.introVideoTitle) {
       final avatarLabel = avatarOptionFor(user.avatarKey).label;
       concierge.addSystemMessage(
-        text: '资料已更新。你现在显示为“${user.name}”，头像主题为“$avatarLabel”。',
+        text:
+            '资料已更新。你现在显示为“${user.name}”，头像主题为“$avatarLabel”，地区为“${user.city}”。',
         createdAt: now,
       );
       changed = true;
@@ -240,6 +286,17 @@ class DemoChatRepository implements ChatRepository {
       concierge.addSystemMessage(
         text: '你刚刚更换了头像，因此需要重新完成本人头像认证。',
         createdAt: now.add(const Duration(milliseconds: 4)),
+      );
+      changed = true;
+    }
+
+    if (previousUser.works.length != user.works.length) {
+      final latestWork = user.works.isEmpty ? null : user.works.first;
+      concierge.addSystemMessage(
+        text: latestWork == null
+            ? '你清空了个人作品展示，主页会以基础资料为主。'
+            : '你新增了作品《${latestWork.title}》，它会同步展示在“我的作品”里。',
+        createdAt: now.add(const Duration(milliseconds: 5)),
       );
       changed = true;
     }
@@ -290,6 +347,31 @@ class DemoChatRepository implements ChatRepository {
       );
     }
 
+    if (thread.id == 'peach') {
+      return ChatMessage(
+        id: 'auto-${now.microsecondsSinceEpoch}',
+        conversationId: thread.id,
+        senderId: 'peach',
+        senderName: '桃桃',
+        text: '我这边也在刷广场推荐，等会儿去看看你新发布的内容。',
+        createdAt: now,
+      );
+    }
+
+    if (thread.id == 'river') {
+      final latestWork = user.works.isEmpty ? null : user.works.first;
+      return ChatMessage(
+        id: 'auto-${now.microsecondsSinceEpoch}',
+        conversationId: thread.id,
+        senderId: 'river',
+        senderName: '小川',
+        text: latestWork == null
+            ? '记得补一下你的作品区，我很想看看你平时拍什么。'
+            : '我看到你最近的作品《${latestWork.title}》了，风格很不错。',
+        createdAt: now,
+      );
+    }
+
     return null;
   }
 
@@ -332,6 +414,7 @@ class _ConversationThread {
     required this.title,
     required this.subtitle,
     required this.categoryLabel,
+    required this.segment,
     required this.messages,
     this.unreadCount = 0,
   });
@@ -340,6 +423,7 @@ class _ConversationThread {
   final String title;
   final String subtitle;
   final String categoryLabel;
+  final ChatInboxSegment segment;
   final List<ChatMessage> messages;
   int unreadCount;
 
@@ -368,6 +452,7 @@ class _ConversationThread {
       title: title,
       subtitle: subtitle,
       categoryLabel: categoryLabel,
+      segment: segment,
       lastMessagePreview: messages.last.text,
       updatedAt: updatedAt,
       unreadCount: unreadCount,
@@ -380,6 +465,7 @@ class _ConversationThread {
       'title': title,
       'subtitle': subtitle,
       'categoryLabel': categoryLabel,
+      'segment': segment.name,
       'unreadCount': unreadCount,
       'messages': messages.map(chatMessageToJson).toList(),
     };
@@ -395,6 +481,7 @@ class _ConversationThread {
       title: json['title'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
       categoryLabel: json['categoryLabel'] as String? ?? '私聊',
+      segment: chatInboxSegmentFromName(json['segment'] as String?),
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       messages: messages,
     );

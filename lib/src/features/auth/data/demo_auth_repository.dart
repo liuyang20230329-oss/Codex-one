@@ -4,8 +4,10 @@ import 'account_flow_helpers.dart';
 import 'account_json_codec.dart';
 import '../domain/app_user.dart';
 import '../domain/auth_exception.dart';
+import '../domain/profile_media_work.dart';
 import '../domain/auth_repository.dart';
 import '../domain/phone_verification_session.dart';
+import '../domain/user_gender.dart';
 import '../domain/verification_status.dart';
 import '../../../core/persistence/json_preferences_store.dart';
 
@@ -32,6 +34,27 @@ class DemoAuthRepository implements AuthRepository {
           name: '演示用户',
           email: 'demo@codex.one',
           avatarKey: 'aurora',
+          gender: UserGender.male,
+          birthYear: 1998,
+          birthMonth: 9,
+          city: '上海',
+          signature: '偏爱语音社交，也喜欢和有趣的人聊到深夜。',
+          introVideoTitle: '30 秒认识我',
+          introVideoSummary: '喜欢电影、livehouse 和周末夜骑，欢迎来找我打招呼。',
+          works: const <ProfileMediaWork>[
+            ProfileMediaWork(
+              id: 'demo-work-1',
+              type: ProfileMediaWorkType.voice,
+              title: '晚安电台',
+              summary: '一段轻松陪伴向的语音作品。',
+            ),
+            ProfileMediaWork(
+              id: 'demo-work-2',
+              type: ProfileMediaWorkType.video,
+              title: '城市夜拍',
+              summary: '用视频记录下班后的城市灯光。',
+            ),
+          ],
         ),
         password: 'Password123!',
       );
@@ -116,12 +139,21 @@ class DemoAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> updateProfile({
-    required String name,
-    required String avatarKey,
+    String? name,
+    String? avatarKey,
+    UserGender? gender,
+    int? birthYear,
+    int? birthMonth,
+    String? city,
+    String? signature,
+    String? introVideoTitle,
+    String? introVideoSummary,
+    List<ProfileMediaWork>? works,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 320));
     final user = _requireSignedInUser();
-    final verification = user.avatarKey == avatarKey
+    final nextAvatarKey = avatarKey ?? user.avatarKey;
+    final verification = user.avatarKey == nextAvatarKey
         ? user.verification
         : user.verification.copyWith(
             faceStatus: VerificationStatus.notStarted,
@@ -129,8 +161,22 @@ class DemoAuthRepository implements AuthRepository {
             clearFaceVerifiedAt: true,
           );
     final updatedUser = user.copyWith(
-      name: name.trim(),
-      avatarKey: avatarKey,
+      name: name?.trim().isNotEmpty == true ? name!.trim() : user.name,
+      avatarKey: nextAvatarKey,
+      gender: gender,
+      birthYear: birthYear,
+      birthMonth: birthMonth,
+      city: city?.trim().isNotEmpty == true ? city!.trim() : user.city,
+      signature: signature?.trim().isNotEmpty == true
+          ? signature!.trim()
+          : user.signature,
+      introVideoTitle: introVideoTitle?.trim().isNotEmpty == true
+          ? introVideoTitle!.trim()
+          : user.introVideoTitle,
+      introVideoSummary: introVideoSummary?.trim().isNotEmpty == true
+          ? introVideoSummary!.trim()
+          : user.introVideoSummary,
+      works: works,
       verification: verification,
     );
     _storeCurrentUser(updatedUser);
