@@ -2,7 +2,7 @@
 
 Branch: `2026.3.27`
 
-Version: `0.3.2-dev.1+20260328`
+Version: `0.4.0-dev.2+2026032823`
 
 This repository now contains a mobile social app starter with an expanded
 account system and a text chat MVP. The current scope covers sign-in, sign-up,
@@ -84,13 +84,25 @@ test/
 `flutterfire configure` will overwrite `lib/firebase_options.dart` with your
 real Firebase project values.
 
-## Recommended mobile package command
+## Recommended Android package command
 
-To keep Android packages smaller than the debug universal APK, prefer:
+To keep Android packages smaller than the debug universal APK, use:
 
 ```powershell
-flutter build apk --release --split-per-abi
+.\scripts\build-android-release.ps1
 ```
 
-That produces smaller installable APKs per CPU architecture instead of one large
-debug bundle.
+The script will:
+
+- run `flutter pub get`
+- run `flutter analyze`
+- run `flutter test`
+- build `release` APKs with `--split-per-abi`
+- tree-shake icons
+- copy timestamped APKs into [`build/app/outputs/flutter-apk`](/D:/Codex/build/app/outputs/flutter-apk)
+
+If you only want to rebuild packages quickly, you can skip checks:
+
+```powershell
+.\scripts\build-android-release.ps1 -SkipAnalyze -SkipTest
+```
