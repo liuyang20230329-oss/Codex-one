@@ -31,6 +31,11 @@ venv/
 
 # Node.js
 node_modules/
+local-api/node_modules/
+local-api/uploads/
+local-api/data/*.db
+local-api/.env
+local-api/ngrok.zip
 
 # Build outputs and coverage
 dist/
@@ -44,3 +49,4 @@ coverage/
 .fvm/
 .metadata
 .pub/
+pubspec.lock

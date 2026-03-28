@@ -2,7 +2,7 @@
 
 Branch: `2026.3.27`
 
-Version: `0.5.0-dev.1+2026032901`
+Version: `0.6.0-dev.1+2026032902`
 
 This repository now contains the `37°` mobile app starter with a branded app
 shell, an expanded trust-oriented account system, and a text chat MVP. The
@@ -50,7 +50,7 @@ conversations for on-device testing.
 
 Demo account:
 
-- Email: `demo@codex.one`
+- Phone: `13800138000`
 - Password: `Password123!`
 
 ## Current structure
@@ -110,3 +110,38 @@ If you only want to rebuild packages quickly, you can skip checks:
 ```powershell
 .\scripts\build-android-release.ps1 -SkipAnalyze -SkipTest
 ```
+
+## Local API development
+
+Start the backend:
+
+```powershell
+cd .\local-api
+npm install
+npm start
+```
+
+Smoke test:
+
+```powershell
+cd .\local-api
+npm run smoke
+```
+
+Run Flutter against the local API on desktop:
+
+```powershell
+flutter run --dart-define=APP_MODE=localApi --dart-define=LOCAL_API_BASE_URL=http://127.0.0.1:3001
+```
+
+Run Flutter against the local API on a real Android phone:
+
+```powershell
+flutter run --dart-define=APP_MODE=localApi --dart-define=LOCAL_API_BASE_URL=http://<YOUR_PC_LAN_IP>:3001
+```
+
+Note:
+
+- `127.0.0.1` only works when the app runs on the same machine as the backend.
+- Android emulator users can replace it with `http://10.0.2.2:3001`.
+- If the local API is unreachable, the app will automatically fall back to demo mode.

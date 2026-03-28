@@ -73,7 +73,7 @@ class AuthValidators {
       return '请输入身份证号。';
     }
     if (!idPattern.hasMatch(normalized)) {
-      return '请输入有效的18位身份证号。';
+      return '请输入有效的 18 位身份证号。';
     }
     return null;
   }

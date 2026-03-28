@@ -144,5 +144,66 @@ void main() {
         contains('手机号认证已完成'),
       );
     });
+
+    test('can create a conversation, toggle pin, and delete it', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final controller = ChatController(
+        repository: DemoChatRepository(
+          store: await JsonPreferencesStore.create(),
+        ),
+      );
+
+      final verifiedUser = user.copyWith(
+        verification: const AccountVerification(
+          phoneStatus: VerificationStatus.verified,
+        ),
+      );
+
+      await controller.syncUser(verifiedUser);
+
+      final created = await controller.createConversation(
+        title: '今晚语音测试',
+        subtitle: '刚刚创建',
+        categoryLabel: '热聊',
+        segment: ChatInboxSegment.hot,
+      );
+
+      expect(created, isTrue);
+      final conversation = controller.selectedConversation;
+      expect(conversation, isNotNull);
+      expect(conversation!.title, '今晚语音测试');
+
+      await controller.togglePinned(conversation.id);
+      expect(
+        controller.conversations.firstWhere((item) => item.id == conversation.id).isPinned,
+        isTrue,
+      );
+
+      await controller.deleteConversation(conversation.id);
+      expect(
+        controller.conversations.where((item) => item.id == conversation.id),
+        isEmpty,
+      );
+    });
+
+    test('markAllRead clears unread counters across every segment', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final controller = ChatController(
+        repository: DemoChatRepository(
+          store: await JsonPreferencesStore.create(),
+        ),
+      );
+
+      await controller.syncUser(user);
+      expect(controller.totalUnreadCount, greaterThan(0));
+
+      await controller.markAllRead();
+
+      expect(controller.totalUnreadCount, 0);
+      expect(
+        controller.conversations.every((item) => item.unreadCount == 0),
+        isTrue,
+      );
+    });
   });
 }

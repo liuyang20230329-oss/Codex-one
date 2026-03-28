@@ -8,14 +8,18 @@ class SignInForm extends StatefulWidget {
     required this.isBusy,
     required this.onSubmit,
     required this.onSwitchMode,
+    required this.onWechatLogin,
+    required this.onQqLogin,
   });
 
   final bool isBusy;
   final Future<void> Function({
-    required String email,
+    required String phoneNumber,
     required String password,
   }) onSubmit;
   final VoidCallback onSwitchMode;
+  final VoidCallback onWechatLogin;
+  final VoidCallback onQqLogin;
 
   @override
   State<SignInForm> createState() => _SignInFormState();
@@ -23,12 +27,12 @@ class SignInForm extends StatefulWidget {
 
 class _SignInFormState extends State<SignInForm> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -40,7 +44,7 @@ class _SignInFormState extends State<SignInForm> {
     }
 
     await widget.onSubmit(
-      email: _emailController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
       password: _passwordController.text,
     );
   }
@@ -55,14 +59,14 @@ class _SignInFormState extends State<SignInForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const <String>[AutofillHints.email],
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              autofillHints: const <String>[AutofillHints.telephoneNumber],
               decoration: const InputDecoration(
-                labelText: '登录邮箱',
-                prefixIcon: Icon(Icons.alternate_email),
+                labelText: '登录手机号',
+                prefixIcon: Icon(Icons.smartphone_outlined),
               ),
-              validator: AuthValidators.email,
+              validator: AuthValidators.phoneNumber,
             ),
             const SizedBox(height: 14),
             TextFormField(
@@ -88,6 +92,26 @@ class _SignInFormState extends State<SignInForm> {
                       )
                     : const Text('登录'),
               ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.isBusy ? null : widget.onWechatLogin,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('微信登录'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.isBusy ? null : widget.onQqLogin,
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('QQ 登录'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextButton(

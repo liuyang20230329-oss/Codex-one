@@ -19,7 +19,7 @@ void main() {
 
       await controller.signUp(
         name: 'Liu Yang',
-        email: 'liuyang@example.com',
+        phoneNumber: '13800138031',
         password: 'Password123!',
       );
 
@@ -53,7 +53,7 @@ void main() {
       );
 
       await controller.signIn(
-        email: 'demo@codex.one',
+        phoneNumber: '13800138000',
         password: 'Password123!',
       );
 
@@ -62,7 +62,7 @@ void main() {
       expect(success, isFalse);
       expect(
         controller.errorMessage,
-        '请先完成身份证认证，再进行人脸认证。',
+        '请先完成身份证实名认证，再进行本人认证。',
       );
       expect(
         controller.currentUser?.verification.faceStatus,
@@ -79,7 +79,7 @@ void main() {
       );
 
       await controller.signIn(
-        email: 'demo@codex.one',
+        phoneNumber: '13800138000',
         password: 'Password123!',
       );
 
@@ -114,7 +114,7 @@ void main() {
       );
 
       await controller.signIn(
-        email: 'demo@codex.one',
+        phoneNumber: '13800138000',
         password: 'Password123!',
       );
       await controller.submitIdentityVerification(
@@ -136,8 +136,7 @@ void main() {
       expect(controller.currentUser?.verification.faceMatchScore, isNull);
     });
 
-    test('persists demo account progress across repository recreation',
-        () async {
+    test('persists demo account progress across repository recreation', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final store = await JsonPreferencesStore.create();
       final controller = AuthController(
@@ -146,7 +145,7 @@ void main() {
 
       await controller.signUp(
         name: 'Persistent User',
-        email: 'persist@example.com',
+        phoneNumber: '13800138041',
         password: 'Password123!',
       );
       final session = await controller.requestPhoneVerification(
@@ -160,7 +159,7 @@ void main() {
         ),
       );
 
-      expect(restoredController.currentUser?.email, 'persist@example.com');
+      expect(restoredController.currentUser?.email, '13800138041@37degrees.local');
       expect(
         restoredController.currentUser?.verification.phoneStatus,
         VerificationStatus.verified,

@@ -13,7 +13,7 @@ class SignUpForm extends StatefulWidget {
   final bool isBusy;
   final Future<void> Function({
     required String name,
-    required String email,
+    required String phoneNumber,
     required String password,
   }) onSubmit;
   final VoidCallback onSwitchMode;
@@ -25,7 +25,7 @@ class SignUpForm extends StatefulWidget {
 class _SignUpFormState extends State<SignUpForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _agreedToTerms = false;
@@ -34,7 +34,7 @@ class _SignUpFormState extends State<SignUpForm> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -54,7 +54,7 @@ class _SignUpFormState extends State<SignUpForm> {
 
     await widget.onSubmit(
       name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
       password: _passwordController.text,
     );
   }
@@ -80,15 +80,15 @@ class _SignUpFormState extends State<SignUpForm> {
             ),
             const SizedBox(height: 14),
             TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
-              autofillHints: const <String>[AutofillHints.newUsername],
+              autofillHints: const <String>[AutofillHints.telephoneNumber],
               decoration: const InputDecoration(
-                labelText: '注册邮箱',
-                prefixIcon: Icon(Icons.mail_outline),
+                labelText: '注册手机号',
+                prefixIcon: Icon(Icons.smartphone_outlined),
               ),
-              validator: AuthValidators.email,
+              validator: AuthValidators.phoneNumber,
             ),
             const SizedBox(height: 14),
             TextFormField(
@@ -125,7 +125,7 @@ class _SignUpFormState extends State<SignUpForm> {
               value: _agreedToTerms,
               controlAffinity: ListTileControlAffinity.leading,
               title: const Text('我已阅读并同意用户协议与隐私政策'),
-              subtitle: const Text('当前版本先保留协议勾选的交互入口，后续可接正式协议页。'),
+              subtitle: const Text('后续可继续接入正式协议页面和未成年人规则说明。'),
               onChanged: widget.isBusy
                   ? null
                   : (value) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/brand/app_brand.dart';
+import '../domain/social_login_provider.dart';
 import 'auth_controller.dart';
 import 'widgets/sign_in_form.dart';
 import 'widgets/sign_up_form.dart';
@@ -81,7 +82,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             const SizedBox(height: 20),
                             Text(
-                              '先登录，再逐步完成手机号、实名与本人认证。未完成全部认证前，仍可先体验系统引导和基础浏览。',
+                              '先用手机号登录，再逐步完成手机号、实名认证与本人认证。未完成认证前仍可先浏览与体验系统引导。',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: const Color(0xFF525866),
                               ),
@@ -110,10 +111,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               },
                             ),
                             const SizedBox(height: 20),
-                            if (widget.controller.errorMessage !=
-                                null) ...<Widget>[
-                              _ErrorBanner(
-                                  message: widget.controller.errorMessage!),
+                            if (widget.controller.errorMessage != null) ...<Widget>[
+                              _ErrorBanner(message: widget.controller.errorMessage!),
                               const SizedBox(height: 16),
                             ],
                             if (widget.showDemoAccount) ...<Widget>[
@@ -124,25 +123,33 @@ class _AuthScreenState extends State<AuthScreen> {
                               SignInForm(
                                 isBusy: widget.controller.isBusy,
                                 onSubmit: widget.controller.signIn,
-                                onSwitchMode: () =>
-                                    _switchMode(AuthMode.signUp),
+                                onSwitchMode: () => _switchMode(AuthMode.signUp),
+                                onWechatLogin: () {
+                                  widget.controller.triggerSocialLogin(
+                                    SocialLoginProvider.wechat,
+                                  );
+                                },
+                                onQqLogin: () {
+                                  widget.controller.triggerSocialLogin(
+                                    SocialLoginProvider.qq,
+                                  );
+                                },
                               )
                             else
                               SignUpForm(
                                 isBusy: widget.controller.isBusy,
                                 onSubmit: ({
                                   required String name,
-                                  required String email,
+                                  required String phoneNumber,
                                   required String password,
                                 }) {
                                   return widget.controller.signUp(
                                     name: name,
-                                    email: email,
+                                    phoneNumber: phoneNumber,
                                     password: password,
                                   );
                                 },
-                                onSwitchMode: () =>
-                                    _switchMode(AuthMode.signIn),
+                                onSwitchMode: () => _switchMode(AuthMode.signIn),
                               ),
                           ],
                         );
@@ -241,11 +248,11 @@ class _DemoAccountCard extends StatelessWidget {
         children: <Widget>[
           Text('演示账号'),
           SizedBox(height: 8),
-          Text('邮箱：demo@codex.one'),
+          Text('手机号：13800138000'),
           SizedBox(height: 6),
           Text('密码：Password123!'),
           SizedBox(height: 6),
-          Text('登录后可在“我的”里继续完成手机号认证与实名流程。'),
+          Text('登录后可在“我的”里继续完成手机号、实名和本人认证。'),
         ],
       ),
     );

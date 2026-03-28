@@ -5,6 +5,7 @@ import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
 import '../domain/profile_media_work.dart';
 import '../domain/phone_verification_session.dart';
+import '../domain/social_login_provider.dart';
 import '../domain/user_gender.dart';
 
 enum AuthStatus {
@@ -36,12 +37,12 @@ class AuthController extends ChangeNotifier {
   bool get isBusy => _status == AuthStatus.authenticating;
 
   Future<void> signIn({
-    required String email,
+    required String phoneNumber,
     required String password,
   }) async {
     await _authenticate(
       action: () => _repository.signIn(
-        email: email,
+        phoneNumber: phoneNumber,
         password: password,
       ),
     );
@@ -49,16 +50,62 @@ class AuthController extends ChangeNotifier {
 
   Future<void> signUp({
     required String name,
-    required String email,
+    required String phoneNumber,
     required String password,
   }) async {
     await _authenticate(
       action: () => _repository.signUp(
         name: name,
-        email: email,
+        phoneNumber: phoneNumber,
         password: password,
       ),
     );
+  }
+
+  Future<bool> requestPasswordReset({
+    required String phoneNumber,
+  }) async {
+    return _runVoidMutation(
+      action: () => _repository.requestPasswordReset(
+        phoneNumber: phoneNumber,
+      ),
+      successMessage: '验证码已发送，请继续完成重置密码。',
+    );
+  }
+
+  Future<bool> confirmPasswordReset({
+    required String phoneNumber,
+    required String code,
+    required String newPassword,
+  }) async {
+    return _runVoidMutation(
+      action: () => _repository.confirmPasswordReset(
+        phoneNumber: phoneNumber,
+        code: code,
+        newPassword: newPassword,
+      ),
+      successMessage: '密码已更新，请使用新密码重新登录。',
+    );
+  }
+
+  Future<bool> triggerSocialLogin(SocialLoginProvider provider) async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.triggerSocialLogin(provider);
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+    } catch (_) {
+      _errorMessage = '${provider.label}登录暂时不可用，请稍后再试。';
+    }
+
+    _status = _currentUser == null
+        ? AuthStatus.unauthenticated
+        : AuthStatus.authenticated;
+    notifyListeners();
+    return false;
   }
 
   Future<void> signOut() async {
@@ -259,6 +306,39 @@ class AuthController extends ChangeNotifier {
           : AuthStatus.authenticated;
       notifyListeners();
       return null;
+    }
+  }
+
+  Future<bool> _runVoidMutation({
+    required Future<void> Function() action,
+    required String successMessage,
+  }) async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await action();
+      _errorMessage = successMessage;
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _errorMessage = '认证服务暂时不可用，请稍后再试。';
+      _status = _currentUser == null
+          ? AuthStatus.unauthenticated
+          : AuthStatus.authenticated;
+      notifyListeners();
+      return false;
     }
   }
 }

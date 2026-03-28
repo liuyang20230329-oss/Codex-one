@@ -1,19 +1,20 @@
 import 'app_user.dart';
 import 'profile_media_work.dart';
 import 'phone_verification_session.dart';
+import 'social_login_provider.dart';
 import 'user_gender.dart';
 
 abstract class AuthRepository {
   AppUser? get currentUser;
 
   Future<AppUser> signIn({
-    required String email,
+    required String phoneNumber,
     required String password,
   });
 
   Future<AppUser> signUp({
     required String name,
-    required String email,
+    required String phoneNumber,
     required String password,
   });
 
@@ -45,6 +46,18 @@ abstract class AuthRepository {
   });
 
   Future<AppUser> completeFaceVerification();
+
+  Future<void> requestPasswordReset({
+    required String phoneNumber,
+  });
+
+  Future<void> confirmPasswordReset({
+    required String phoneNumber,
+    required String code,
+    required String newPassword,
+  });
+
+  Future<Never> triggerSocialLogin(SocialLoginProvider provider);
 
   Future<void> signOut();
 }

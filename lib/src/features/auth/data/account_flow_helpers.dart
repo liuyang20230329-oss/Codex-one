@@ -47,6 +47,14 @@ AppUser buildAccountUser({
   );
 }
 
+String syntheticEmailForPhone(String phoneNumber) {
+  final normalized = normalizePhoneNumber(phoneNumber);
+  if (normalized.isEmpty) {
+    return 'user-${DateTime.now().millisecondsSinceEpoch}@37degrees.local';
+  }
+  return '$normalized@37degrees.local';
+}
+
 String defaultAvatarKeyFor(String seed) {
   final normalized = seed.trim();
   if (normalized.isEmpty) {

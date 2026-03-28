@@ -6,6 +6,7 @@ import '../../../core/widgets/app_profile_avatar.dart';
 import '../../auth/domain/app_user.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_inbox_segment.dart';
+import '../domain/chat_message_type.dart';
 import 'chat_controller.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -43,6 +44,186 @@ class _ChatScreenState extends State<ChatScreen> {
     _composerController.clear();
   }
 
+  Future<void> _sendPresetMessage({
+    required ChatMessageType type,
+    required String text,
+    String? metadataLabel,
+  }) async {
+    final success = await widget.controller.sendMessage(
+      text,
+      type: type,
+      metadataLabel: metadataLabel,
+    );
+    if (!success) {
+      return;
+    }
+    _composerController.clear();
+  }
+
+  Future<void> _openCreateConversationDialog() async {
+    final titleController = TextEditingController();
+    final subtitleController = TextEditingController(text: '刚刚创建');
+    var selectedSegment = ChatInboxSegment.friends;
+
+    final draft = await showDialog<_CreateConversationDraft>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('新建会话'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    TextField(
+                      controller: titleController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: '会话标题',
+                        hintText: '例如：今晚聊聊语音房',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: subtitleController,
+                      decoration: const InputDecoration(
+                        labelText: '副标题',
+                        hintText: '例如：刚刚创建',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<ChatInboxSegment>(
+                      key: ValueKey<ChatInboxSegment>(selectedSegment),
+                      initialValue: selectedSegment,
+                      decoration: const InputDecoration(
+                        labelText: '关系分类',
+                      ),
+                      items: ChatInboxSegment.values
+                          .where((item) => item != ChatInboxSegment.system)
+                          .map(
+                            (item) => DropdownMenuItem<ChatInboxSegment>(
+                              value: item,
+                              child: Text(item.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() {
+                          selectedSegment = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final title = titleController.text.trim();
+                    if (title.isEmpty) {
+                      return;
+                    }
+                    Navigator.of(context).pop(
+                      _CreateConversationDraft(
+                        title: title,
+                        subtitle: subtitleController.text.trim().isEmpty
+                            ? '刚刚创建'
+                            : subtitleController.text.trim(),
+                        segment: selectedSegment,
+                      ),
+                    );
+                  },
+                  child: const Text('创建'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    titleController.dispose();
+    subtitleController.dispose();
+
+    if (draft == null) {
+      return;
+    }
+
+    final success = await widget.controller.createConversation(
+      title: draft.title,
+      subtitle: draft.subtitle,
+      categoryLabel: _categoryLabelForSegment(draft.segment),
+      segment: draft.segment,
+    );
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? '已创建新的会话。' : '当前无法创建会话，请稍后再试。'),
+      ),
+    );
+  }
+
+  Future<void> _handleConversationAction(
+    ChatConversation conversation,
+    _ConversationAction action,
+  ) async {
+    switch (action) {
+      case _ConversationAction.pin:
+        await widget.controller.togglePinned(conversation.id);
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(conversation.isPinned ? '已取消置顶。' : '已置顶该会话。'),
+          ),
+        );
+        return;
+      case _ConversationAction.delete:
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('删除会话'),
+              content: Text('确定删除“${conversation.title}”吗？删除后聊天记录将从当前设备移除。'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('删除'),
+                ),
+              ],
+            );
+          },
+        );
+        if (confirmed != true) {
+          return;
+        }
+        await widget.controller.deleteConversation(conversation.id);
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('会话已删除。')),
+        );
+        return;
+    }
+  }
+
   void _syncComposerWithConversation(String conversationId) {
     if (_lastConversationId == conversationId) {
       return;
@@ -70,6 +251,9 @@ class _ChatScreenState extends State<ChatScreen> {
             user: currentUser,
             palette: palette,
             selectedSegment: _selectedSegment,
+            onCreateConversation: _openCreateConversationDialog,
+            onMarkAllRead: widget.controller.markAllRead,
+            onConversationActionSelected: _handleConversationAction,
             onSegmentChanged: (segment) {
               setState(() {
                 _selectedSegment = _selectedSegment == segment ? null : segment;
@@ -143,6 +327,30 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                     ),
                               ),
+                              if (message.type != ChatMessageType.text) ...<Widget>[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isMine
+                                        ? Colors.white.withValues(alpha: 0.18)
+                                        : palette.surface,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    message.type.label,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: isMine ? Colors.white : null,
+                                        ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 6),
                               Text(
                                 message.text,
@@ -153,6 +361,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                       color: isMine ? Colors.white : null,
                                     ),
                               ),
+                              if ((message.metadataLabel ?? message.mediaUrl)
+                                  case final String meta) ...<Widget>[
+                                const SizedBox(height: 8),
+                                Text(
+                                  meta,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: isMine ? Colors.white70 : null,
+                                      ),
+                                ),
+                              ],
                               const SizedBox(height: 8),
                               Text(
                                 _deliveryStatusLabel(message.deliveryStatus),
@@ -206,6 +427,59 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
+                    if (canSendMessages) ...<Widget>[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          ActionChip(
+                            avatar: const Icon(Icons.emoji_emotions_outlined),
+                            label: const Text('表情'),
+                            onPressed: () {
+                              _sendPresetMessage(
+                                type: ChatMessageType.emoji,
+                                text: '送你一个打招呼表情',
+                                metadataLabel: '😊 默认表情',
+                              );
+                            },
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.image_outlined),
+                            label: const Text('图片'),
+                            onPressed: () {
+                              _sendPresetMessage(
+                                type: ChatMessageType.image,
+                                text: '分享了一张图片占位',
+                                metadataLabel: '演示图片素材',
+                              );
+                            },
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.mic_none_rounded),
+                            label: const Text('语音'),
+                            onPressed: () {
+                              _sendPresetMessage(
+                                type: ChatMessageType.voice,
+                                text: '分享了一条语音占位',
+                                metadataLabel: '15 秒语音片段',
+                              );
+                            },
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.videocam_outlined),
+                            label: const Text('视频'),
+                            onPressed: () {
+                              _sendPresetMessage(
+                                type: ChatMessageType.video,
+                                text: '分享了一段视频占位',
+                                metadataLabel: '30 秒视频介绍',
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     if (!canSendMessages) ...<Widget>[
                       Container(
                         width: double.infinity,
@@ -292,33 +566,40 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   List<String> _quickRepliesFor(ChatConversation conversation) {
-    switch (conversation.id) {
-      case 'concierge':
-        return const <String>[
-          '我刚完成了一项新的认证。',
-          '告诉我下一步该测什么。',
-          '我现在可以开始体验聊天了。',
-        ];
-      case 'night-owls':
-        return const <String>[
-          '我今晚正在测试新手引导流程。',
-          '现在账号中心顺畅多了。',
-          '下一步我想试试语音房。',
-        ];
-      default:
-        return const <String>[
-          '你好，很高兴认识你。',
-          '你那边测试得怎么样？',
-          '晚点我们继续在这里聊吧？',
-        ];
+    if (_isGuidedConversationId(conversation.id)) {
+      return const <String>[
+        '我刚完成了一项新的认证。',
+        '告诉我下一步该测什么。',
+        '我现在可以开始体验聊天了。',
+      ];
     }
+    if (conversation.id.startsWith('night-owls')) {
+      return const <String>[
+        '我今晚正在测试新手引导流程。',
+        '现在账号中心顺畅多了。',
+        '下一步我想试试语音房。',
+      ];
+    }
+    return const <String>[
+      '你好，很高兴认识你。',
+      '你那边测试得怎么样？',
+      '晚点我们继续在这里聊吧？',
+    ];
   }
 
   String _deliveryStatusLabel(String value) {
-    if (value == 'Delivered') {
-      return '已送达';
+    switch (value) {
+      case 'Delivered':
+        return '已送达';
+      case 'Read':
+        return '已读';
+      case 'Sending':
+        return '发送中';
+      case 'Failed':
+        return '发送失败';
+      default:
+        return value;
     }
-    return value;
   }
 }
 
@@ -328,6 +609,9 @@ class _ConversationListView extends StatelessWidget {
     required this.user,
     required this.palette,
     required this.selectedSegment,
+    required this.onCreateConversation,
+    required this.onMarkAllRead,
+    required this.onConversationActionSelected,
     required this.onSegmentChanged,
   });
 
@@ -335,6 +619,12 @@ class _ConversationListView extends StatelessWidget {
   final AppUser user;
   final UserTonePalette palette;
   final ChatInboxSegment? selectedSegment;
+  final Future<void> Function() onCreateConversation;
+  final Future<void> Function() onMarkAllRead;
+  final Future<void> Function(
+    ChatConversation conversation,
+    _ConversationAction action,
+  ) onConversationActionSelected;
   final ValueChanged<ChatInboxSegment> onSegmentChanged;
 
   @override
@@ -386,6 +676,28 @@ class _ConversationListView extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: <Widget>[
+            OutlinedButton.icon(
+              onPressed: onCreateConversation,
+              icon: const Icon(Icons.add_comment_outlined),
+              label: const Text('新建会话'),
+            ),
+            TextButton.icon(
+              onPressed:
+                  controller.totalUnreadCount == 0 ? null : onMarkAllRead,
+              icon: const Icon(Icons.mark_chat_read_outlined),
+              label: Text(
+                controller.totalUnreadCount == 0
+                    ? '全部已读'
+                    : '全部已读 (${controller.totalUnreadCount})',
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 18),
         Text(
@@ -441,6 +753,9 @@ class _ConversationListView extends StatelessWidget {
             user: user,
             palette: palette,
             onTap: () => controller.openConversation(conversation.id),
+            onActionSelected: (action) {
+              onConversationActionSelected(conversation, action);
+            },
           ),
           const SizedBox(height: 12),
         ],
@@ -546,12 +861,14 @@ class _ConversationCard extends StatelessWidget {
     required this.user,
     required this.palette,
     required this.onTap,
+    required this.onActionSelected,
   });
 
   final ChatConversation conversation;
   final AppUser user;
   final UserTonePalette palette;
   final VoidCallback onTap;
+  final ValueChanged<_ConversationAction> onActionSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -604,6 +921,14 @@ class _ConversationCard extends StatelessWidget {
                           _conversationTimeLabel(conversation.updatedAt),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        if (conversation.isPinned) ...<Widget>[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.push_pin_rounded,
+                            size: 16,
+                            color: palette.primary,
+                          ),
+                        ],
                         const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -631,12 +956,45 @@ class _ConversationCard extends StatelessWidget {
                             child: const Text('待认证'),
                           ),
                         ],
+                        PopupMenuButton<_ConversationAction>(
+                          tooltip: '会话操作',
+                          onSelected: onActionSelected,
+                          itemBuilder: (context) => <PopupMenuEntry<_ConversationAction>>[
+                            PopupMenuItem<_ConversationAction>(
+                              value: _ConversationAction.pin,
+                              child: Text(conversation.isPinned ? '取消置顶' : '置顶会话'),
+                            ),
+                            const PopupMenuItem<_ConversationAction>(
+                              value: _ConversationAction.delete,
+                              child: Text('删除会话'),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      conversation.subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            conversation.subtitle,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (conversation.isOnline) ...<Widget>[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle,
+                            size: 10,
+                            color: Color(0xFF16A34A),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '在线',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -656,11 +1014,48 @@ class _ConversationCard extends StatelessWidget {
 
   bool _canCurrentUserSend(AppUser user, ChatConversation conversation) {
     if (conversation.segment == ChatInboxSegment.system ||
-        conversation.id == 'concierge') {
+        _isGuidedConversationId(conversation.id)) {
       return true;
     }
     return user.canSendPrivateMessages;
   }
+}
+
+enum _ConversationAction {
+  pin,
+  delete,
+}
+
+class _CreateConversationDraft {
+  const _CreateConversationDraft({
+    required this.title,
+    required this.subtitle,
+    required this.segment,
+  });
+
+  final String title;
+  final String subtitle;
+  final ChatInboxSegment segment;
+}
+
+String _categoryLabelForSegment(ChatInboxSegment segment) {
+  switch (segment) {
+    case ChatInboxSegment.friends:
+      return '私聊';
+    case ChatInboxSegment.hot:
+      return '热聊';
+    case ChatInboxSegment.followers:
+      return '关注我的';
+    case ChatInboxSegment.following:
+      return '我关注的';
+    case ChatInboxSegment.system:
+      return '系统';
+  }
+}
+
+bool _isGuidedConversationId(String conversationId) {
+  return conversationId == 'concierge' ||
+      conversationId.startsWith('concierge-');
 }
 
 String _conversationTimeLabel(DateTime value) {

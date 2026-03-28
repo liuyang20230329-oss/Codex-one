@@ -2,8 +2,8 @@ name: codex_one
 description: Thirty-Seven Degrees mobile app scaffold with brand, trust flow, and chat MVP.
 publish_to: "none"
 
-# SemVer pre-release for the March 29, 2026 brand and trust-flow refresh.
-version: 0.5.0-dev.1+2026032901
+# SemVer pre-release for the March 29, 2026 local-api and chat upgrade.
+version: 0.6.0-dev.1+2026032902
 
 environment:
   sdk: ^3.6.0
@@ -14,6 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_auth: ^6.3.0
   firebase_core: ^4.6.0
+  http: ^1.5.0
   shared_preferences: ^2.5.3
 
 dev_dependencies:

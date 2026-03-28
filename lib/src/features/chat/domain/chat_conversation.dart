@@ -10,6 +10,8 @@ class ChatConversation {
     required this.lastMessagePreview,
     required this.updatedAt,
     this.unreadCount = 0,
+    this.isPinned = false,
+    this.isOnline = false,
   });
 
   final String id;
@@ -20,6 +22,8 @@ class ChatConversation {
   final String lastMessagePreview;
   final DateTime updatedAt;
   final int unreadCount;
+  final bool isPinned;
+  final bool isOnline;
 
   ChatConversation copyWith({
     String? id,
@@ -30,6 +34,8 @@ class ChatConversation {
     String? lastMessagePreview,
     DateTime? updatedAt,
     int? unreadCount,
+    bool? isPinned,
+    bool? isOnline,
   }) {
     return ChatConversation(
       id: id ?? this.id,
@@ -40,6 +46,8 @@ class ChatConversation {
       lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
       updatedAt: updatedAt ?? this.updatedAt,
       unreadCount: unreadCount ?? this.unreadCount,
+      isPinned: isPinned ?? this.isPinned,
+      isOnline: isOnline ?? this.isOnline,
     );
   }
 }

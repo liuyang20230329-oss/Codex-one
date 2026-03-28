@@ -20,11 +20,11 @@ void main() {
 
       await controller.signUp(
         name: 'Liu Yang',
-        email: 'liuyang@example.com',
+        phoneNumber: '13800138011',
         password: 'Password123!',
       );
 
-      expect(controller.currentUser?.email, 'liuyang@example.com');
+      expect(controller.currentUser?.email, '13800138011@37degrees.local');
       expect(controller.status, AuthStatus.authenticated);
 
       await controller.signOut();
@@ -42,7 +42,7 @@ void main() {
       );
 
       await controller.signIn(
-        email: 'demo@codex.one',
+        phoneNumber: '13800138000',
         password: 'wrong-password',
       );
 
@@ -63,7 +63,7 @@ void main() {
 
       await controller.signUp(
         name: 'Profile Owner',
-        email: 'profile-owner@example.com',
+        phoneNumber: '13800138022',
         password: 'Password123!',
       );
 
