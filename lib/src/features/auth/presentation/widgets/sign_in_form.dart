@@ -59,7 +59,7 @@ class _SignInFormState extends State<SignInForm> {
               keyboardType: TextInputType.emailAddress,
               autofillHints: const <String>[AutofillHints.email],
               decoration: const InputDecoration(
-                labelText: '邮箱',
+                labelText: '登录邮箱',
                 prefixIcon: Icon(Icons.alternate_email),
               ),
               validator: AuthValidators.email,

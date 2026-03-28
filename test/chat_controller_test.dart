@@ -59,7 +59,13 @@ void main() {
         ),
       );
 
-      await controller.syncUser(user);
+      final verifiedUser = user.copyWith(
+        verification: const AccountVerification(
+          phoneStatus: VerificationStatus.verified,
+        ),
+      );
+
+      await controller.syncUser(verifiedUser);
       final conversation = controller.conversations.first;
       await controller.openConversation(conversation.id);
       final beforeCount = controller.messages.length;
@@ -71,6 +77,34 @@ void main() {
       expect(controller.messages.first.text, isNotEmpty);
       expect(controller.messages.last.text, isNotEmpty);
       expect(controller.selectedConversation?.id, conversation.id);
+    });
+
+    test(
+        'requires phone verification for private chats but keeps concierge open',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final controller = ChatController(
+        repository: DemoChatRepository(
+          store: await JsonPreferencesStore.create(),
+        ),
+      );
+
+      await controller.syncUser(user);
+      await controller.openConversation('nora');
+
+      final privateChatSent = await controller.sendMessage('可以直接私聊吗？');
+
+      expect(privateChatSent, isFalse);
+      expect(
+        controller.errorMessage,
+        '请先完成手机号认证后再开始私聊；系统引导会话仍可继续使用。',
+      );
+
+      await controller.openConversation('concierge');
+      final systemChatSent = await controller.sendMessage('我先和系统确认流程。');
+
+      expect(systemChatSent, isTrue);
+      expect(controller.messages.last.senderName, '37°');
     });
 
     test('persists chats and links account progress to concierge messages',

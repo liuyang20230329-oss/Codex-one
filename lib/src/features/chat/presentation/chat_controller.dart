@@ -108,7 +108,13 @@ class ChatController extends ChangeNotifier {
   Future<bool> sendMessage(String text) async {
     final user = _currentUser;
     final conversationId = _selectedConversationId;
+    final conversation = selectedConversation;
     if (user == null || conversationId == null) {
+      return false;
+    }
+    if (!_canSendMessage(user, conversation)) {
+      _errorMessage = '请先完成手机号认证后再开始私聊；系统引导会话仍可继续使用。';
+      notifyListeners();
       return false;
     }
     if (text.trim().isEmpty) {
@@ -149,6 +155,10 @@ class ChatController extends ChangeNotifier {
     }
   }
 
+  bool canSendToSelectedConversation(AppUser user) {
+    return _canSendMessage(user, selectedConversation);
+  }
+
   Future<void> _refreshConversations() async {
     final user = _currentUser;
     if (user == null) {
@@ -171,5 +181,16 @@ class ChatController extends ChangeNotifier {
 
     _isBusy = false;
     notifyListeners();
+  }
+
+  bool _canSendMessage(AppUser user, ChatConversation? conversation) {
+    if (conversation == null) {
+      return false;
+    }
+    if (conversation.segment == ChatInboxSegment.system ||
+        conversation.id == 'concierge') {
+      return true;
+    }
+    return user.canSendPrivateMessages;
   }
 }

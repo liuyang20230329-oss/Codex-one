@@ -38,7 +38,7 @@ class DemoAuthRepository implements AuthRepository {
           birthYear: 1998,
           birthMonth: 9,
           city: '上海',
-          signature: '偏爱语音社交，也喜欢和有趣的人聊到深夜。',
+          signature: '偏爱语音陪伴，也喜欢和真诚的人聊到深夜。',
           introVideoTitle: '30 秒认识我',
           introVideoSummary: '喜欢电影、livehouse 和周末夜骑，欢迎来找我打招呼。',
           works: const <ProfileMediaWork>[

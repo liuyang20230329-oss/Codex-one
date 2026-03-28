@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/brand/app_brand.dart';
 import '../../../core/theme/user_tone_palette.dart';
 import '../../../core/widgets/app_profile_avatar.dart';
 import '../../auth/domain/app_user.dart';
@@ -60,12 +61,13 @@ class _ChatScreenState extends State<ChatScreen> {
       animation: widget.controller,
       builder: (context, _) {
         final palette = tonePaletteFor(widget.user.gender);
+        final currentUser = widget.user;
         final selectedConversation = widget.controller.selectedConversation;
         if (selectedConversation == null) {
           _lastConversationId = null;
           return _ConversationListView(
             controller: widget.controller,
-            user: widget.user,
+            user: currentUser,
             palette: palette,
             selectedSegment: _selectedSegment,
             onSegmentChanged: (segment) {
@@ -76,6 +78,8 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
         _syncComposerWithConversation(selectedConversation.id);
+        final canSendMessages =
+            widget.controller.canSendToSelectedConversation(currentUser);
 
         return Column(
           children: <Widget>[
@@ -110,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final message = widget.controller.messages[index];
-                  final isMine = message.senderId == widget.user.id;
+                  final isMine = message.senderId == currentUser.id;
                   return Align(
                     alignment:
                         isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -132,7 +136,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                     .textTheme
                                     .labelLarge
                                     ?.copyWith(
-                                      color: isMine ? Colors.white70 : null,
+                                      color: isMine
+                                          ? Colors.white70
+                                          : AppBrand.ink.withValues(
+                                              alpha: 0.64,
+                                            ),
                                     ),
                               ),
                               const SizedBox(height: 6),
@@ -198,11 +206,28 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
+                    if (!canSendMessages) ...<Widget>[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5E8DE),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE8C6AD)),
+                        ),
+                        child: const Text(
+                          '当前会话属于私聊或关系对话，请先完成手机号认证后再发送消息。你仍然可以先在系统引导会话里继续体验。',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Row(
                       children: <Widget>[
                         Expanded(
                           child: TextField(
                             controller: _composerController,
+                            enabled:
+                                canSendMessages && !widget.controller.isBusy,
                             minLines: 1,
                             maxLines: 4,
                             textInputAction: TextInputAction.send,
@@ -213,19 +238,28 @@ class _ChatScreenState extends State<ChatScreen> {
                                 value: value,
                               );
                             },
-                            onSubmitted: (_) => _send(),
+                            onSubmitted: (_) {
+                              if (canSendMessages) {
+                                _send();
+                              }
+                            },
                             maxLength: 280,
                             decoration: InputDecoration(
-                              hintText: '输入消息',
+                              hintText:
+                                  canSendMessages ? '输入消息' : '完成手机号认证后可发送私聊消息',
                               prefixIcon: const Icon(Icons.chat_bubble_outline),
-                              helperText:
-                                  '${_composerController.text.length}/280 字',
+                              helperText: canSendMessages
+                                  ? '${_composerController.text.length}/280 字'
+                                  : '系统引导会话不受此限制',
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         FilledButton(
-                          onPressed: widget.controller.isBusy ? null : _send,
+                          onPressed:
+                              widget.controller.isBusy || !canSendMessages
+                                  ? null
+                                  : _send,
                           style: FilledButton.styleFrom(
                             backgroundColor: palette.primary,
                             foregroundColor: palette.foreground,
@@ -241,7 +275,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '草稿会按会话暂存，在 App 打开期间不会丢失。',
+                        canSendMessages
+                            ? '草稿会按会话暂存，在 App 打开期间不会丢失。'
+                            : '完成手机号认证后，当前输入区会自动恢复可发送状态。',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -340,7 +376,9 @@ class _ConversationListView extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '上方是关系分类，下面是聊天对话消息。有新消息时会显示红点提醒。',
+                      user.canSendPrivateMessages
+                          ? '上方是关系分类，下面是聊天对话消息。有新消息时会显示红点提醒。'
+                          : '上方是关系分类，下面是聊天对话消息。完成手机号认证后，可正式发起和回复私聊。',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -400,6 +438,7 @@ class _ConversationListView extends StatelessWidget {
         for (final conversation in visibleConversations) ...<Widget>[
           _ConversationCard(
             conversation: conversation,
+            user: user,
             palette: palette,
             onTap: () => controller.openConversation(conversation.id),
           ),
@@ -504,11 +543,13 @@ class _InboxSummaryCard extends StatelessWidget {
 class _ConversationCard extends StatelessWidget {
   const _ConversationCard({
     required this.conversation,
+    required this.user,
     required this.palette,
     required this.onTap,
   });
 
   final ChatConversation conversation;
+  final AppUser user;
   final UserTonePalette palette;
   final VoidCallback onTap;
 
@@ -559,6 +600,11 @@ class _ConversationCard extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
+                        Text(
+                          _conversationTimeLabel(conversation.updatedAt),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -570,6 +616,21 @@ class _ConversationCard extends StatelessWidget {
                           ),
                           child: Text(conversation.categoryLabel),
                         ),
+                        if (!_canCurrentUserSend(
+                            user, conversation)) ...<Widget>[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5E8DE),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text('待认证'),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -592,4 +653,33 @@ class _ConversationCard extends StatelessWidget {
       ),
     );
   }
+
+  bool _canCurrentUserSend(AppUser user, ChatConversation conversation) {
+    if (conversation.segment == ChatInboxSegment.system ||
+        conversation.id == 'concierge') {
+      return true;
+    }
+    return user.canSendPrivateMessages;
+  }
+}
+
+String _conversationTimeLabel(DateTime value) {
+  final now = DateTime.now();
+  final difference = now.difference(value);
+  if (difference.inMinutes < 1) {
+    return '刚刚';
+  }
+  if (difference.inMinutes < 60) {
+    return '${difference.inMinutes}分钟前';
+  }
+  if (difference.inHours < 24) {
+    return '${difference.inHours}小时前';
+  }
+  if (difference.inDays == 1) {
+    return '昨天';
+  }
+  if (difference.inDays < 7) {
+    return '${difference.inDays}天前';
+  }
+  return '${value.month}月${value.day}日';
 }

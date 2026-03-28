@@ -1,9 +1,9 @@
 name: codex_one
-description: Social mobile app starter scaffold for Codex One.
+description: Thirty-Seven Degrees mobile app scaffold with brand, trust flow, and chat MVP.
 publish_to: "none"
 
-# SemVer pre-release for the March 28, 2026 Android package optimization refresh.
-version: 0.4.0-dev.2+2026032823
+# SemVer pre-release for the March 29, 2026 brand and trust-flow refresh.
+version: 0.5.0-dev.1+2026032901
 
 environment:
   sdk: ^3.6.0

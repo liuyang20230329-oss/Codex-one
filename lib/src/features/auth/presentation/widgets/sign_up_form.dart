@@ -28,6 +28,8 @@ class _SignUpFormState extends State<SignUpForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _agreedToTerms = false;
+  bool _showAgreementError = false;
 
   @override
   void dispose() {
@@ -41,6 +43,12 @@ class _SignUpFormState extends State<SignUpForm> {
   Future<void> _submit() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
+      return;
+    }
+    if (!_agreedToTerms) {
+      setState(() {
+        _showAgreementError = true;
+      });
       return;
     }
 
@@ -77,7 +85,7 @@ class _SignUpFormState extends State<SignUpForm> {
               textInputAction: TextInputAction.next,
               autofillHints: const <String>[AutofillHints.newUsername],
               decoration: const InputDecoration(
-                labelText: '邮箱',
+                labelText: '注册邮箱',
                 prefixIcon: Icon(Icons.mail_outline),
               ),
               validator: AuthValidators.email,
@@ -112,6 +120,29 @@ class _SignUpFormState extends State<SignUpForm> {
               },
             ),
             const SizedBox(height: 20),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _agreedToTerms,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('我已阅读并同意用户协议与隐私政策'),
+              subtitle: const Text('当前版本先保留协议勾选的交互入口，后续可接正式协议页。'),
+              onChanged: widget.isBusy
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _agreedToTerms = value ?? false;
+                        _showAgreementError = false;
+                      });
+                    },
+            ),
+            if (_showAgreementError)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  '请先同意用户协议与隐私政策。',
+                  style: TextStyle(color: Color(0xFFB91C1C)),
+                ),
+              ),
             FilledButton(
               onPressed: widget.isBusy ? null : _submit,
               child: Padding(

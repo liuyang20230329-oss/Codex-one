@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/brand/app_brand.dart';
 import '../../../core/theme/user_tone_palette.dart';
 import '../../account/presentation/account_screen.dart';
 import '../../auth/domain/app_user.dart';
@@ -91,10 +92,30 @@ class _HomeScreenState extends State<HomeScreen> {
         final palette = tonePaletteFor(user.gender);
 
         return Scaffold(
-          backgroundColor: palette.surface.withValues(alpha: 0.32),
+          backgroundColor: AppBrand.paper,
           appBar: AppBar(
-            title: Text(titles[_selectedIndex]),
-            backgroundColor: palette.surface.withValues(alpha: 0.82),
+            titleSpacing: 20,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  AppBrand.appName,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                      ),
+                ),
+                Text(
+                  titles[_selectedIndex],
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+              ],
+            ),
+            backgroundColor: AppBrand.ink,
+            foregroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
           ),
           body: SafeArea(
@@ -196,6 +217,9 @@ class _PlazaTabState extends State<PlazaTab> {
       distance: '1.2km',
       signature: '喜欢电影、手账和夜晚慢慢聊。',
       tags: <String>['视频', '聊天', '附近'],
+      trustLabel: '真人',
+      isVerified: true,
+      isOnline: true,
     ),
     _PlazaUserCardData(
       name: '阿泽',
@@ -205,6 +229,9 @@ class _PlazaTabState extends State<PlazaTab> {
       distance: '3.8km',
       signature: '最近在找一起连麦打游戏和聊音乐的人。',
       tags: <String>['语音', '游戏', '热聊'],
+      trustLabel: '实名',
+      isVerified: true,
+      isOnline: true,
     ),
     _PlazaUserCardData(
       name: '若梨',
@@ -214,6 +241,9 @@ class _PlazaTabState extends State<PlazaTab> {
       distance: '6.4km',
       signature: '喜欢拍照、旅行，也想认识更多有趣灵魂。',
       tags: <String>['图片', '旅行', '同城'],
+      trustLabel: '真人',
+      isVerified: true,
+      isOnline: false,
     ),
     _PlazaUserCardData(
       name: '北川',
@@ -222,7 +252,10 @@ class _PlazaTabState extends State<PlazaTab> {
       city: '南京',
       distance: '2.1km',
       signature: '想找可以一起语音、一起散步的人。',
-      tags: <String>['社交', '陪伴', '新朋友'],
+      tags: <String>['陪伴', '散步', '新朋友'],
+      trustLabel: '待认证',
+      isVerified: false,
+      isOnline: true,
     ),
   ];
 
@@ -241,7 +274,15 @@ class _PlazaTabState extends State<PlazaTab> {
         _ => true,
       };
       return matchesRegion && matchesGender && matchesAge;
-    }).toList();
+    }).toList()
+      ..sort((left, right) {
+        final leftScore =
+            (left.isVerified ? 100 : 0) + (left.isOnline ? 10 : 0) - left.age;
+        final rightScore = (right.isVerified ? 100 : 0) +
+            (right.isOnline ? 10 : 0) -
+            right.age;
+        return rightScore.compareTo(leftScore);
+      });
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -252,18 +293,18 @@ class _PlazaTabState extends State<PlazaTab> {
             children: <Widget>[
               _BannerCard(
                 palette: palette,
-                title: '同城社交正在升温',
-                description: '先在广场刷到合适的人，再决定是聊天、语音还是视频认识。',
+                title: '37° 广场正在更新可信推荐',
+                description: '先看推荐卡片，再决定要不要继续聊天、语音或见面认识。',
               ),
               _BannerCard(
                 palette: palette,
                 title: '认证越完整，曝光越稳定',
-                description: '手机号、身份证和本人头像认证已经打通，后续会继续影响推荐权重。',
+                description: '手机号、实名和本人认证会共同影响推荐顺位与广场展示权重。',
               ),
               _BannerCard(
                 palette: palette,
-                title: '作品与视频介绍更吸引人',
-                description: '完善你的个人资料、视频介绍和作品区，会更容易获得高质量互动。',
+                title: '资料越完整，越容易被认真看见',
+                description: '完善视频介绍、作品和个性签名，会更容易获得高质量回应。',
               ),
             ],
           ),
@@ -276,9 +317,9 @@ class _PlazaTabState extends State<PlazaTab> {
         const SizedBox(height: 16),
         _NoticeCard(
           notices: const <String>[
-            '平台通知：今日广场推荐优先展示资料完整、活跃度高的用户。',
+            '平台通知：今日推荐优先展示资料完整、活跃度高、认证更充分的用户。',
             '系统提醒：圈子动态支持文案、定位、图片、语音、动图和网址。',
-            '版本更新：消息页已拆分为关系模块和对话列表，红点提醒同步生效。',
+            '版本更新：消息页已拆分为关系模块和对话列表，红点提醒已同步生效。',
           ],
         ),
         const SizedBox(height: 20),
@@ -403,6 +444,10 @@ class _CircleTabState extends State<CircleTab> {
       content: '今晚在武康路散步，拍到了很舒服的夜景，想找人一起语音聊聊天。',
       createdAtLabel: '5分钟前',
       attachments: <String>['图片', '定位'],
+      verificationLabel: '真人',
+      distance: '0.8km',
+      likes: 26,
+      comments: 8,
     ),
     const _CirclePost(
       id: 'circle-2',
@@ -411,6 +456,10 @@ class _CircleTabState extends State<CircleTab> {
       content: '刚刚录了一段晚安语音，适合睡前听，欢迎来圈子里互动。',
       createdAtLabel: '18分钟前',
       attachments: <String>['语音'],
+      verificationLabel: '实名',
+      distance: '2.4km',
+      likes: 15,
+      comments: 4,
     ),
     const _CirclePost(
       id: 'circle-3',
@@ -419,6 +468,10 @@ class _CircleTabState extends State<CircleTab> {
       content: '发现一组超适合做聊天开场白的动图，晚点整理成合集。',
       createdAtLabel: '1小时前',
       attachments: <String>['动图', '网址'],
+      verificationLabel: '真人',
+      distance: '4.1km',
+      likes: 34,
+      comments: 12,
     ),
   ];
 
@@ -445,6 +498,11 @@ class _CircleTabState extends State<CircleTab> {
           content: draft.content,
           createdAtLabel: '刚刚',
           attachments: draft.attachments,
+          verificationLabel:
+              widget.user.canAppearInRecommendations ? '真人' : '待认证',
+          distance: '附近',
+          likes: 0,
+          comments: 0,
         ),
       );
     });
@@ -474,7 +532,7 @@ class _CircleTabState extends State<CircleTab> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '这里展示附近的人发布的朋友圈内容。支持文案、定位、图片、语音、动图和网址，悬浮按钮可直接发布。',
+                    '这里展示附近的人发布的动态内容。支持文案、定位、图片、语音、动图和网址，悬浮按钮可直接发布。',
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
@@ -536,7 +594,7 @@ class _BannerCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Text(
-                '广场 Banner',
+                '37° 广场',
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -624,7 +682,7 @@ class _NoticeCard extends StatelessWidget {
                   padding: EdgeInsets.only(top: 6),
                   child: CircleAvatar(
                     radius: 3,
-                    backgroundColor: Color(0xFF0F766E),
+                    backgroundColor: AppBrand.ink,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -661,11 +719,26 @@ class _PlazaUserCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: palette.surface,
-                foregroundColor: palette.primary,
-                child: Text(profile.name.characters.take(1).toString()),
+              Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: palette.surface,
+                    foregroundColor: palette.primary,
+                    child: Text(profile.name.characters.take(1).toString()),
+                  ),
+                  Positioned(
+                    right: -1,
+                    bottom: -1,
+                    child: CircleAvatar(
+                      radius: 6,
+                      backgroundColor: profile.isOnline
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -684,16 +757,35 @@ class _PlazaUserCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(profile.distance),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.surface,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(profile.distance),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: profile.isVerified
+                          ? palette.surface
+                          : const Color(0xFFF6EDE5),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(profile.trustLabel),
+                  ),
+                ],
               ),
             ],
           ),
@@ -756,9 +848,22 @@ class _CirclePostCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text('${post.location} · ${post.createdAtLabel}'),
+                    Text(
+                      '${post.location} · ${post.distance} · ${post.createdAtLabel}',
+                    ),
                   ],
                 ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5E8DE),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(post.verificationLabel),
               ),
             ],
           ),
@@ -779,6 +884,22 @@ class _CirclePostCard extends StatelessWidget {
                 child: Text(attachment),
               );
             }).toList(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              const Icon(Icons.favorite_border, size: 18),
+              const SizedBox(width: 6),
+              Text('${post.likes}'),
+              const SizedBox(width: 18),
+              const Icon(Icons.mode_comment_outlined, size: 18),
+              const SizedBox(width: 6),
+              Text('${post.comments}'),
+              const Spacer(),
+              const Icon(Icons.share_outlined, size: 18),
+              const SizedBox(width: 16),
+              const Icon(Icons.flag_outlined, size: 18),
+            ],
           ),
         ],
       ),
@@ -919,6 +1040,9 @@ class _PlazaUserCardData {
     required this.distance,
     required this.signature,
     required this.tags,
+    required this.trustLabel,
+    required this.isVerified,
+    required this.isOnline,
   });
 
   final String name;
@@ -928,6 +1052,9 @@ class _PlazaUserCardData {
   final String distance;
   final String signature;
   final List<String> tags;
+  final String trustLabel;
+  final bool isVerified;
+  final bool isOnline;
 }
 
 class _CirclePost {
@@ -938,6 +1065,10 @@ class _CirclePost {
     required this.content,
     required this.createdAtLabel,
     required this.attachments,
+    required this.verificationLabel,
+    required this.distance,
+    required this.likes,
+    required this.comments,
   });
 
   final String id;
@@ -946,6 +1077,10 @@ class _CirclePost {
   final String content;
   final String createdAtLabel;
   final List<String> attachments;
+  final String verificationLabel;
+  final String distance;
+  final int likes;
+  final int comments;
 }
 
 class _CirclePostDraft {

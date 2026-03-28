@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.liuyang.codexone" "\0"
-            VALUE "FileDescription", "codex_one" "\0"
+            VALUE "CompanyName", "Thirty-Seven Degrees" "\0"
+            VALUE "FileDescription", "37°" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "codex_one" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.liuyang.codexone. All rights reserved." "\0"
+            VALUE "InternalName", "37°" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Thirty-Seven Degrees. All rights reserved." "\0"
             VALUE "OriginalFilename", "codex_one.exe" "\0"
-            VALUE "ProductName", "codex_one" "\0"
+            VALUE "ProductName", "37°" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

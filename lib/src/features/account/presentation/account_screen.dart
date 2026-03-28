@@ -37,6 +37,8 @@ class _AccountScreenState extends State<AccountScreen> {
         final verification = currentUser.verification;
         final palette = tonePaletteFor(currentUser.gender);
         final progressText = '已完成 ${verification.verifiedCount}/3 项认证';
+        final profileCompletionText =
+            '资料完成度 ${currentUser.profileCompletionPercent}%';
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -45,14 +47,15 @@ class _AccountScreenState extends State<AccountScreen> {
               user: currentUser,
               palette: palette,
               progressText: progressText,
+              profileCompletionText: profileCompletionText,
               onEdit: () => _openProfileEditor(context, currentUser),
             ),
             const SizedBox(height: 18),
             _InfoNoticeCard(
               palette: palette,
-              title: '未认证也能先聊天',
+              title: '认证、私聊与曝光规则',
               message:
-                  '账号体系已经支持手机号、身份证和本人头像认证，但用户在未完成认证前仍可正常聊天。后续如需增加曝光权重、推荐限制或信任规则，可以直接在这套状态模型上继续扩展。',
+                  '当前版本支持手机号、身份证和本人头像认证。未完成手机号认证前，你仍可继续和系统引导会话互动；完成手机号认证后可正式私聊；完成本人认证后会在广场和圈子里获得更稳定的推荐曝光。',
             ),
             const SizedBox(height: 18),
             _ProfileSectionCard(
@@ -365,12 +368,14 @@ class _AccountHeroCard extends StatelessWidget {
     required this.user,
     required this.palette,
     required this.progressText,
+    required this.profileCompletionText,
     required this.onEdit,
   });
 
   final AppUser user;
   final UserTonePalette palette;
   final String progressText;
+  final String profileCompletionText;
   final VoidCallback onEdit;
 
   @override
@@ -454,6 +459,23 @@ class _AccountHeroCard extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(palette.badge),
             ),
           ),
+          const SizedBox(height: 14),
+          Text(
+            profileCompletionText,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: user.profileCompletion,
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
@@ -464,12 +486,14 @@ class _AccountHeroCard extends StatelessWidget {
               const SizedBox(width: 12),
               _MetricTile(
                 label: '视频介绍',
-                value: user.introVideoTitle == '还没有上传视频介绍' ? '未上传' : '已完善',
+                value: user.introVideoTitle == AppUser.defaultIntroVideoTitle
+                    ? '未上传'
+                    : '已完善',
               ),
               const SizedBox(width: 12),
               _MetricTile(
-                label: '认证进度',
-                value: '${user.verification.verifiedCount}/3',
+                label: '资料完成度',
+                value: '${user.profileCompletionPercent}%',
               ),
             ],
           ),

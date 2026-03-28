@@ -1,33 +1,40 @@
 import 'package:flutter/material.dart';
 
+import '../brand/app_brand.dart';
+
 class AppTheme {
   static ThemeData light() {
-    const seed = Color(0xFF0F766E);
+    const seed = AppBrand.ink;
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.light,
-      primary: const Color(0xFF0F766E),
-      secondary: const Color(0xFFF97316),
-      surface: const Color(0xFFFFFBF5),
+      primary: AppBrand.ink,
+      secondary: const Color(0xFF4468F6),
+      surface: Colors.white,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFFF4F7F5),
+      scaffoldBackgroundColor: AppBrand.paper,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppBrand.ink,
+        elevation: 0,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: AppBrand.paperStrong),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppBrand.paperStrong),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(color: scheme.primary, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -43,11 +50,37 @@ class AppTheme {
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: AppBrand.paperStrong,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? AppBrand.ink : const Color(0xFF525866),
+          );
+        }),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppBrand.ink,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
       textTheme: const TextTheme(
         headlineMedium: TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.8,
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.6,
         ),
         titleLarge: TextStyle(
           fontSize: 20,

@@ -304,13 +304,15 @@ class FirebaseAuthRepository implements AuthRepository {
       gender: previousMatches ? previousUser.gender : UserGender.undisclosed,
       birthYear: previousMatches ? previousUser.birthYear : null,
       birthMonth: previousMatches ? previousUser.birthMonth : null,
-      city: previousMatches ? previousUser.city : '未设置地区',
-      signature: previousMatches ? previousUser.signature : '这个人很酷，还没有留下签名。',
-      introVideoTitle:
-          previousMatches ? previousUser.introVideoTitle : '还没有上传视频介绍',
+      city: previousMatches ? previousUser.city : AppUser.defaultCity,
+      signature:
+          previousMatches ? previousUser.signature : AppUser.defaultSignature,
+      introVideoTitle: previousMatches
+          ? previousUser.introVideoTitle
+          : AppUser.defaultIntroVideoTitle,
       introVideoSummary: previousMatches
           ? previousUser.introVideoSummary
-          : '后续可以用一段视频介绍自己，让更多人更快认识你。',
+          : AppUser.defaultIntroVideoSummary,
       works: previousMatches ? previousUser.works : const <ProfileMediaWork>[],
       verification: previousMatches
           ? previousUser.verification

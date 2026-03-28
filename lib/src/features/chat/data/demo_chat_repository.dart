@@ -130,8 +130,8 @@ class DemoChatRepository implements ChatRepository {
     return <String, _ConversationThread>{
       'concierge': _ConversationThread(
         id: 'concierge',
-        title: '新手引导',
-        subtitle: '账号与聊天引导',
+        title: '37° 向导',
+        subtitle: '认证、资料与权限提醒',
         categoryLabel: '系统',
         segment: ChatInboxSegment.system,
         unreadCount: 1,
@@ -140,8 +140,8 @@ class DemoChatRepository implements ChatRepository {
             id: 'seed-1',
             conversationId: 'concierge',
             senderId: 'system',
-            senderName: 'Codex One',
-            text: '欢迎来到 Codex One。你可以先完成账号认证，也可以直接从这里开始第一段聊天。',
+            senderName: '37°',
+            text: '欢迎来到 37°。你可以先完善资料和认证，也可以先在这里了解今晚的体验重点。',
             createdAt: now.subtract(const Duration(minutes: 18)),
           ),
         ],
@@ -165,8 +165,8 @@ class DemoChatRepository implements ChatRepository {
       ),
       'night-owls': _ConversationThread(
         id: 'night-owls',
-        title: '夜猫子俱乐部',
-        subtitle: '城市社交内测群',
+        title: '37° 观察室',
+        subtitle: '体验反馈与高信任交流',
         categoryLabel: '群聊',
         segment: ChatInboxSegment.hot,
         unreadCount: 2,
@@ -313,13 +313,13 @@ class DemoChatRepository implements ChatRepository {
     if (thread.id == 'concierge') {
       final verificationCount = user.verification.verifiedCount;
       final guidance = verificationCount < 3
-          ? '你现在依然可以继续聊天，后续再补完剩余 ${3 - verificationCount} 项认证即可。'
-          : '你的账号信任闭环已经完成，现在可以把重点放在匹配和聊天上了。';
+          ? '你现在依然可以继续体验系统引导，后续再补完剩余 ${3 - verificationCount} 项认证即可。'
+          : '你的账号信任闭环已经完成，现在可以把重点放在匹配和高质量交流上了。';
       return ChatMessage(
         id: 'auto-${now.microsecondsSinceEpoch}',
         conversationId: thread.id,
         senderId: 'system',
-        senderName: 'Codex One',
+        senderName: '37°',
         text: '已收到你的消息：“$text”。$guidance',
         createdAt: now,
       );
@@ -438,7 +438,7 @@ class _ConversationThread {
         id: 'system-${createdAt.microsecondsSinceEpoch}',
         conversationId: id,
         senderId: 'system',
-        senderName: 'Codex One',
+        senderName: '37°',
         text: text,
         createdAt: createdAt,
       ),

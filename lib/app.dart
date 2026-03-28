@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'src/core/brand/app_brand.dart';
 import 'src/core/bootstrap/app_bootstrap.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/features/auth/presentation/auth_controller.dart';
@@ -44,7 +45,7 @@ class _CodexOneAppState extends State<CodexOneApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Codex One 社交',
+      title: AppBrand.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: AuthGate(

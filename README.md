@@ -1,13 +1,14 @@
-# Codex One
+# 37°
 
 Branch: `2026.3.27`
 
-Version: `0.4.0-dev.2+2026032823`
+Version: `0.5.0-dev.1+2026032901`
 
-This repository now contains a mobile social app starter with an expanded
-account system and a text chat MVP. The current scope covers sign-in, sign-up,
-profile basics, phone verification, identity submission, face and avatar
-ownership status, and seeded text conversations for on-device testing.
+This repository now contains the `37°` mobile app starter with a branded app
+shell, an expanded trust-oriented account system, and a text chat MVP. The
+current scope covers sign-in, sign-up, profile basics, phone verification,
+identity submission, face and avatar ownership status, and seeded text
+conversations for on-device testing.
 
 ## What is included
 
@@ -19,11 +20,14 @@ ownership status, and seeded text conversations for on-device testing.
 - Sign-out flow
 - Firebase bootstrap flow
 - Demo fallback when Firebase is not configured
+- 37° brand identity and app naming
 - Account center with profile editing
 - Phone verification flow with demo code delivery
 - Identity verification submission flow
 - Face verification state flow for avatar ownership
+- Profile completion progress and trust hints
 - Text chat MVP with seeded threads and message composer
+- Phone-verification gate for private chats with system-chat fallback
 - Local persistence for demo accounts and chat history
 - Concierge system messages that react to profile and verification changes
 - Basic auth tests

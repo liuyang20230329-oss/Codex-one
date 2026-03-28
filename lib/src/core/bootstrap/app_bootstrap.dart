@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import '../../../firebase_options.dart';
+import '../brand/app_brand.dart';
 import '../persistence/json_preferences_store.dart';
 import '../../features/auth/data/demo_auth_repository.dart';
 import '../../features/auth/data/firebase_auth_repository.dart';
@@ -41,7 +42,7 @@ class AppBootstrap {
         backend: AuthBackend.demo,
         statusLabel: '演示认证模式',
         statusMessage:
-            '当前还没有配置 Firebase。你可以先使用演示模式测试流程；后续替换 lib/firebase_options.dart 或执行 flutterfire configure 后，就能启用真实的邮箱密码登录。',
+            '当前还没有配置 Firebase。你可以先在 ${AppBrand.appName} 里使用演示模式测试完整流程；后续替换 lib/firebase_options.dart 或执行 flutterfire configure 后，就能启用真实的邮箱密码登录。',
       );
     }
 

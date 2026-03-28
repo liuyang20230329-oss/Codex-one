@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/brand/app_brand.dart';
 import 'auth_controller.dart';
 import 'widgets/sign_in_form.dart';
 import 'widgets/sign_up_form.dart';
@@ -48,11 +49,11 @@ class _AuthScreenState extends State<AuthScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: <Color>[
-              Color(0xFF083344),
-              Color(0xFF0F766E),
-              Color(0xFFF8FAFC),
+              AppBrand.ink,
+              AppBrand.inkSoft,
+              Color(0xFF2A2522),
             ],
-            stops: <double>[0, 0.45, 1],
+            stops: <double>[0, 0.56, 1],
           ),
         ),
         child: SafeArea(
@@ -71,24 +72,18 @@ class _AuthScreenState extends State<AuthScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
                             Container(
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.all(22),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
-                                borderRadius: BorderRadius.circular(24),
+                                color: AppBrand.ink,
+                                borderRadius: BorderRadius.circular(28),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    '用文字、语音和视频建立连接',
-                                    style: theme.textTheme.headlineMedium,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    '当前版本已经支持 Firebase 邮箱密码认证，同时保留本地演示模式，方便你直接测试完整流程。',
-                                    style: theme.textTheme.bodyLarge,
-                                  ),
-                                ],
+                              child: const AppBrandLockup(),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              '先登录，再逐步完成手机号、实名与本人认证。未完成全部认证前，仍可先体验系统引导和基础浏览。',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: const Color(0xFF525866),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -178,9 +173,9 @@ class _StatusCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: const Color(0xFFF5F2EC),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: const Color(0xFFE2D8C7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,9 +232,9 @@ class _DemoAccountCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDFA),
+        color: const Color(0xFFF7F4EE),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF99F6E4)),
+        border: Border.all(color: const Color(0xFFE2D8C7)),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,6 +244,8 @@ class _DemoAccountCard extends StatelessWidget {
           Text('邮箱：demo@codex.one'),
           SizedBox(height: 6),
           Text('密码：Password123!'),
+          SizedBox(height: 6),
+          Text('登录后可在“我的”里继续完成手机号认证与实名流程。'),
         ],
       ),
     );
