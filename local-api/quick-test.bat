@@ -1,79 +1,57 @@
 @echo off
 chcp 65001 >nul
 echo ============================================================
-echo 🧪 快速测试本地开发环境
+echo 🧪 快速测试本地 API 环境
 echo ============================================================
 
 echo.
-echo 📊 检查API服务器...
-echo.
-ping -n 1 localhost -p 3000 -w 1 >nul 2>&1
+echo 📊 检查 API 健康状态...
+curl -s http://localhost:3001/health --connect-timeout 5 >nul 2>&1
 if errorlevel 1 (
-    echo ❌ API服务器未启动！
-    echo    请先启动API服务器: cd D:\Codex\local-api ^|^ node server.js
+    echo ❌ API 服务器未启动或 3001 不可访问
+    echo    请先运行: D:\Codex\local-api\start.bat
 ) else (
-    echo ✅ API服务器运行正常！
+    echo ✅ API 服务器运行正常
 )
 
 echo.
-echo 📋 检查数据库...
-echo.
-if exist "D:\Codex\local-api\data\37degrees.db" (
-    echo ✅ 数据库文件存在！
+echo 📋 检查数据库文件...
+if exist "D:\Codex\local-api\data\37degrees-v2.db" (
+    echo ✅ 数据库文件存在
 ) else (
     echo ❌ 数据库文件不存在
 )
 
 echo.
-echo 🌐 检查端口占用...
-echo.
-netstat -ano | findstr ":3000" >nul 2>&1
+echo 🌐 检查端口监听...
+netstat -ano | findstr ":3001" >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️  端口3000被占用
+    echo ❌ 端口 3001 未监听
 ) else (
-    echo ✅ 端口3000可用
+    echo ✅ 端口 3001 已监听
 )
 
 echo.
-echo 📱 检查网络连通性...
-echo.
-curl -s http://localhost:3000/health --connect-timeout 5 >nul 2>&1
+echo 📱 检查 API 状态接口...
+curl -s http://localhost:3001/api/v1/status --connect-timeout 5 >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 网络连接失败
+    echo ❌ API 状态接口不可访问
 ) else (
-    echo ✅ 网络连接正常！
+    echo ✅ API 状态接口可访问
 )
 
 echo.
 echo ============================================================
-echo 🎯 环境检查完成！
+echo 🎯 检查完成
 echo ============================================================
-
+echo ✅ API服务器: http://localhost:3001
+echo ✅ 数据库: D:\Codex\local-api\data\37degrees-v2.db
+echo ✅ Flutter客户端: D:\Codex\lib\src\core\network\api_client.dart
 echo.
-echo ✅ API服务器: http://localhost:3000
-echo ✅ 数据库: D:\Codex\local-api\data\37degrees.db
-echo ✅ HTTP客户端: D:\Codex\lib\src\core\network\http_client.dart
-echo ✅ 认证系统: Demo + 本地API
-echo.
-echo.
-echo 📝 下一步行动：
-echo.
-echo 1️⃣ 启动Flutter应用
-echo    flutter run
-echo.
-echo 2️⃣ 测试功能
-echo    - 用户注册
-echo    - 用户登录
-echo    - 资料更新
-echo.
-echo 3️⃣ 配置内网穿透（可选）
-echo    - 运行: D:\Codex\local-api\setup-tunnel.bat
-echo    - 或手动安装ngrok
-echo.
-echo.
-echo 📋 查看详细文档：
-echo    D:\Codex\docs\local-development-complete.md
-echo.
+echo 下一步:
+echo 1. 局域网联调: flutter run --dart-define=APP_MODE=localApi --dart-define=LOCAL_API_BASE_URL=http://你的电脑IP:3001
+echo 2. 外网联调: 先运行 D:\Codex\local-api\setup-tunnel.bat 或 ngrok http 3001
+echo 3. APK打包: D:\Codex\scripts\build-android-release.ps1 -LocalApiBaseUrl https://你的公网地址 -ArtifactLabel public-api
 echo ============================================================
 
 pause

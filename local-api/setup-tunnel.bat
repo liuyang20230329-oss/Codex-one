@@ -8,7 +8,7 @@ echo.
 echo 1️⃣  方法1：使用ngrok（推荐）
 echo    - 访问: https://ngrok.com
 echo    - 下载：Stable版 for Windows
-echo    - 解压后运行: ngrok.exe http 3000
+echo    - 解压后运行: ngrok.exe http 3001
 echo.
 
 echo 2️⃣ 方法2：使用Cloudflare Tunnel（免费）
@@ -38,7 +38,7 @@ echo.
 echo 1️⃣ 下载并安装ngrok（推荐）
 echo    - 访问: https://ngrok.com/download
 echo    - 下载Stable版 for Windows
-echo    - 解压并运行: ngrok.exe http 3000
+echo    - 解压并运行: ngrok.exe http 3001
 echo.
 echo 2️⃣ 配置Flutter应用
 echo    - 编辑 lib/config/api_config.dart
@@ -54,9 +54,9 @@ echo ============================================================
 echo 💡 提示信息：
 echo ============================================================
 echo.
-echo - API服务器运行在: http://localhost:3000
-echo - 健康检查: http://localhost:3000/health
-echo - API状态: http://localhost:3000/api/v1/status
+echo - API服务器运行在: http://localhost:3001
+echo - 健康检查: http://localhost:3001/health
+echo - API状态: http://localhost:3001/api/v1/status
 echo.
 echo - Flutter应用需要配置网络权限
 echo - Android: 修改 AndroidManifest.xml
@@ -71,7 +71,7 @@ echo 请选择一个方法开始配置内网穿透：
 echo.
 echo [1] 手动下载ngrok
 echo [2] 访问https://ngrok.com/download下载
-echo [3] 解压并运行 ngrok.exe http 3000
+echo [3] 解压并运行 ngrok.exe http 3001
 echo.
 echo [4] 或访问其他免费穿透工具网站
 echo.

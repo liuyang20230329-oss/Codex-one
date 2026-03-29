@@ -26,7 +26,7 @@ if not exist "ngrok.exe" (
             echo 提示: ngrok窗口会保持打开状态
             echo       按 Ctrl+C 停止ngrok
             echo.
-            ngrok http 3000
+            ngrok http 3001
         ) else (
             echo ❌ ngrok.exe未找到，请检查下载
         )
@@ -41,7 +41,7 @@ if not exist "ngrok.exe" (
     echo 提示: ngrok窗口会保持打开状态
     echo       按 Ctrl+C 停止ngrok
     echo.
-    ngrok http 3000
+    ngrok http 3001
 )
 
 echo.

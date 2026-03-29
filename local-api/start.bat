@@ -28,14 +28,16 @@ if not exist "data" (
 echo.
 echo 🚀 启动API服务器...
 echo ============================================================
-echo 📡 本地地址: http://localhost:3000
-echo 🔍 健康检查: http://localhost:3000/health
-echo 📋 API状态: http://localhost:3000/api/v1/status
+echo 📡 本地地址: http://localhost:3001
+echo 🔍 健康检查: http://localhost:3001/health
+echo 📋 API状态: http://localhost:3001/api/v1/status
 echo.
 echo 💡 提示: 按 Ctrl+C 停止服务器
 echo ============================================================
 echo.
 
+set API_PORT=3001
+set DB_PATH=D:\Codex\local-api\data\37degrees-v2.db
 call node server.js
 
 pause

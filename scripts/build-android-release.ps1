@@ -1,7 +1,10 @@
 param(
     [switch]$SkipAnalyze,
     [switch]$SkipTest,
-    [switch]$SkipPubGet
+    [switch]$SkipPubGet,
+    [string]$AppMode = "localApi",
+    [string]$LocalApiBaseUrl,
+    [string]$ArtifactLabel
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +63,10 @@ function Stop-GradleDaemons {
 Invoke-Step -Name "Preparing Android release build" -Action {
     Write-Host "Repo root: $repoRoot"
     Write-Host "Output dir: $outputDir"
+    Write-Host "App mode: $AppMode"
+    if ($LocalApiBaseUrl) {
+        Write-Host "Local API base URL: $LocalApiBaseUrl"
+    }
 }
 
 if (-not $SkipPubGet) {
@@ -112,7 +119,21 @@ Invoke-Step -Name "Building release APKs" -Action {
         Push-Location $repoRoot
         try {
             $env:ORG_GRADLE_PROJECT_kotlin_incremental = "false"
-            & flutter build apk --no-pub --release --split-per-abi --tree-shake-icons
+            $buildArgs = @(
+                'build',
+                'apk',
+                '--no-pub',
+                '--release',
+                '--split-per-abi',
+                '--tree-shake-icons'
+            )
+            if ($AppMode) {
+                $buildArgs += "--dart-define=APP_MODE=$AppMode"
+            }
+            if ($LocalApiBaseUrl) {
+                $buildArgs += "--dart-define=LOCAL_API_BASE_URL=$LocalApiBaseUrl"
+            }
+            & flutter @buildArgs
             if ($LASTEXITCODE -ne 0) {
                 throw "flutter build apk failed."
             }
@@ -125,6 +146,13 @@ Invoke-Step -Name "Building release APKs" -Action {
 Invoke-Step -Name "Creating timestamped artifacts" -Action {
     $version = Get-AppVersion
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $labelSuffix = ""
+    if ($ArtifactLabel) {
+        $safeLabel = ($ArtifactLabel -replace '[^a-zA-Z0-9\-]+', '-').Trim('-')
+        if ($safeLabel) {
+            $labelSuffix = "-$safeLabel"
+        }
+    }
 
     $artifactMap = @(
         @{ Source = "app-arm64-v8a-release.apk"; Abi = "arm64-v8a" },
@@ -138,12 +166,12 @@ Invoke-Step -Name "Creating timestamped artifacts" -Action {
             throw "Missing expected APK: $sourcePath"
         }
 
-        $targetName = "codex-one-v$version-ts$timestamp-$($artifact.Abi)-release.apk"
+        $targetName = "codex-one-v$version-ts$timestamp$labelSuffix-$($artifact.Abi)-release.apk"
         $targetPath = Join-Path $outputDir $targetName
         Copy-Item $sourcePath $targetPath -Force
     }
 
-    $artifacts = Get-ChildItem $outputDir -Filter "codex-one-v$version-ts$timestamp-*-release.apk" |
+    $artifacts = Get-ChildItem $outputDir -Filter "codex-one-v$version-ts$timestamp$labelSuffix-*-release.apk" |
         Sort-Object Name
 
     Write-Host ""

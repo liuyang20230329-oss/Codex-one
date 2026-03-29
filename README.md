@@ -111,6 +111,13 @@ If you only want to rebuild packages quickly, you can skip checks:
 .\scripts\build-android-release.ps1 -SkipAnalyze -SkipTest
 ```
 
+If you want the APK to point at a specific local API server, pass it in at
+build time:
+
+```powershell
+.\scripts\build-android-release.ps1 -LocalApiBaseUrl https://your-public-api.example.com -ArtifactLabel public-api
+```
+
 ## Local API development
 
 Start the backend:
@@ -145,3 +152,5 @@ Note:
 - `127.0.0.1` only works when the app runs on the same machine as the backend.
 - Android emulator users can replace it with `http://10.0.2.2:3001`.
 - If the local API is unreachable, the app will automatically fall back to demo mode.
+- To package an APK for a public tunnel or server, use `-LocalApiBaseUrl` when
+  running [`build-android-release.ps1`](/D:/Codex/scripts/build-android-release.ps1).
