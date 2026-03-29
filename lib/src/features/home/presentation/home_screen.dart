@@ -4,6 +4,7 @@ import '../../../core/brand/app_brand.dart';
 import '../../../core/theme/user_tone_palette.dart';
 import '../../account/presentation/account_screen.dart';
 import '../../auth/domain/app_user.dart';
+import '../../auth/domain/profile_media_work.dart';
 import '../../auth/domain/user_gender.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../chat/presentation/chat_controller.dart';
@@ -318,7 +319,7 @@ class _PlazaTabState extends State<PlazaTab> {
         _NoticeCard(
           notices: const <String>[
             '平台通知：今日推荐优先展示资料完整、活跃度高、认证更充分的用户。',
-            '系统提醒：圈子动态支持文案、定位、图片、语音、动图和网址。',
+            '系统提醒：圈子动态支持文案、地址、图片、语音和作品，素材统一通过组件选择。',
             '版本更新：消息页已拆分为关系模块和对话列表，红点提醒已同步生效。',
           ],
         ),
@@ -436,6 +437,8 @@ class CircleTab extends StatefulWidget {
 }
 
 class _CircleTabState extends State<CircleTab> {
+  _CirclePostDraft? _draftCache;
+
   late final List<_CirclePost> _posts = <_CirclePost>[
     const _CirclePost(
       id: 'circle-1',
@@ -443,7 +446,7 @@ class _CircleTabState extends State<CircleTab> {
       location: '上海·徐汇',
       content: '今晚在武康路散步，拍到了很舒服的夜景，想找人一起语音聊聊天。',
       createdAtLabel: '5分钟前',
-      attachments: <String>['图片', '定位'],
+      attachments: <String>['图片 3张', '语音 18秒'],
       verificationLabel: '真人',
       distance: '0.8km',
       likes: 26,
@@ -465,9 +468,9 @@ class _CircleTabState extends State<CircleTab> {
       id: 'circle-3',
       authorName: '桃桃',
       location: '苏州·园区',
-      content: '发现一组超适合做聊天开场白的动图，晚点整理成合集。',
+      content: '刚整理好一组最近拍的城市夜色作品，想放进圈子里看看大家更喜欢哪一版。',
       createdAtLabel: '1小时前',
-      attachments: <String>['动图', '网址'],
+      attachments: <String>['作品 2个'],
       verificationLabel: '真人',
       distance: '4.1km',
       likes: 34,
@@ -475,29 +478,50 @@ class _CircleTabState extends State<CircleTab> {
     ),
   ];
 
-  Future<void> _openPublishSheet() async {
-    final draft = await showModalBottomSheet<_CirclePostDraft>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return const _CreateCirclePostSheet();
-      },
+  Future<void> _openPublishScreen() async {
+    final result = await Navigator.of(context).push<_CircleComposerResult>(
+      MaterialPageRoute<_CircleComposerResult>(
+        fullscreenDialog: true,
+        builder: (context) {
+          return _CreateCirclePostScreen(
+            user: widget.user,
+            initialDraft: _draftCache ?? const _CirclePostDraft(),
+          );
+        },
+      ),
     );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (result.savedDraft != null) {
+      setState(() {
+        _draftCache = result.savedDraft;
+      });
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('退出后草稿已保存，下次会自动恢复。')),
+        );
+      return;
+    }
+
+    final draft = result.publishedDraft;
     if (draft == null) {
       return;
     }
 
     setState(() {
+      _draftCache = null;
       _posts.insert(
         0,
         _CirclePost(
           id: 'circle-${DateTime.now().microsecondsSinceEpoch}',
           authorName: widget.user.name,
-          location: draft.location,
-          content: draft.content,
+          location: draft.locationOption.address,
+          content: draft.displayContent,
           createdAtLabel: '刚刚',
-          attachments: draft.attachments,
+          attachments: draft.attachmentLabels,
           verificationLabel:
               widget.user.canAppearInRecommendations ? '真人' : '待认证',
           distance: '附近',
@@ -506,6 +530,12 @@ class _CircleTabState extends State<CircleTab> {
         ),
       );
     });
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('动态已发布到圈子，正在进入最新列表。')),
+      );
   }
 
   @override
@@ -532,7 +562,7 @@ class _CircleTabState extends State<CircleTab> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '这里展示附近的人发布的动态内容。支持文案、定位、图片、语音、动图和网址，悬浮按钮可直接发布。',
+                    '这里展示附近的人发布的动态内容。发布页会以全屏方式打开，地址、图片、语音和作品都通过独立组件选择。',
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
@@ -549,7 +579,8 @@ class _CircleTabState extends State<CircleTab> {
           right: 20,
           bottom: 20,
           child: FloatingActionButton.extended(
-            onPressed: _openPublishSheet,
+            key: const ValueKey<String>('circle-open-publish'),
+            onPressed: _openPublishScreen,
             backgroundColor: palette.primary,
             foregroundColor: palette.foreground,
             icon: const Icon(Icons.add),
@@ -907,125 +938,975 @@ class _CirclePostCard extends StatelessWidget {
   }
 }
 
-class _CreateCirclePostSheet extends StatefulWidget {
-  const _CreateCirclePostSheet();
+class _CreateCirclePostScreen extends StatefulWidget {
+  const _CreateCirclePostScreen({
+    required this.user,
+    required this.initialDraft,
+  });
+
+  final AppUser user;
+  final _CirclePostDraft initialDraft;
 
   @override
-  State<_CreateCirclePostSheet> createState() => _CreateCirclePostSheetState();
+  State<_CreateCirclePostScreen> createState() =>
+      _CreateCirclePostScreenState();
 }
 
-class _CreateCirclePostSheetState extends State<_CreateCirclePostSheet> {
-  final _contentController = TextEditingController();
-  final _locationController = TextEditingController(text: '上海');
-  final _attachmentNoteController = TextEditingController();
-  final Set<String> _attachments = <String>{};
+class _CreateCirclePostScreenState extends State<_CreateCirclePostScreen> {
+  late final TextEditingController _contentController;
+  late _CircleLocationOption _selectedLocation;
+  late List<_CircleImageAsset> _selectedImages;
+  late List<ProfileMediaWork> _selectedWorks;
+  _CircleVoiceDraft? _selectedVoice;
+  bool _isPublishing = false;
+
+  List<ProfileMediaWork> get _availableWorks {
+    return widget.user.works
+        .where((work) => work.type != ProfileMediaWorkType.gif)
+        .toList(growable: false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final initialDraft = widget.initialDraft;
+    _contentController = TextEditingController(text: initialDraft.content);
+    _selectedLocation = initialDraft.locationOption;
+    _selectedImages = List<_CircleImageAsset>.from(initialDraft.images);
+    _selectedVoice = initialDraft.voiceNote;
+    _selectedWorks = List<ProfileMediaWork>.from(initialDraft.selectedWorks);
+  }
 
   @override
   void dispose() {
     _contentController.dispose();
-    _locationController.dispose();
-    _attachmentNoteController.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    final content = _contentController.text.trim();
-    final location = _locationController.text.trim();
-    final attachmentNote = _attachmentNoteController.text.trim();
-    if (content.isEmpty && _attachments.isEmpty) {
+  _CirclePostDraft _buildDraft() {
+    return _CirclePostDraft(
+      content: _contentController.text.trim(),
+      location: _selectedLocation,
+      images: List<_CircleImageAsset>.unmodifiable(_selectedImages),
+      voiceNote: _selectedVoice,
+      selectedWorks: List<ProfileMediaWork>.unmodifiable(_selectedWorks),
+    );
+  }
+
+  Future<bool> _handleBack() async {
+    if (_isPublishing) {
+      return false;
+    }
+    final draft = _buildDraft();
+    if (!draft.hasAnyContent) {
+      Navigator.of(context).pop();
+      return false;
+    }
+    Navigator.of(context).pop(_CircleComposerResult.saved(draft));
+    return false;
+  }
+
+  Future<void> _selectLocation() async {
+    final location = await showModalBottomSheet<_CircleLocationOption>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CircleLocationPickerSheet(selected: _selectedLocation);
+      },
+    );
+    if (location == null) {
+      return;
+    }
+    setState(() {
+      _selectedLocation = location;
+    });
+  }
+
+  Future<void> _selectImages() async {
+    final images = await showModalBottomSheet<List<_CircleImageAsset>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CircleImagePickerSheet(initialImages: _selectedImages);
+      },
+    );
+    if (images == null) {
+      return;
+    }
+    setState(() {
+      _selectedImages = images;
+    });
+  }
+
+  Future<void> _selectVoice() async {
+    final voice = await showModalBottomSheet<_CircleVoiceDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CircleVoiceRecorderSheet(selectedVoice: _selectedVoice);
+      },
+    );
+    if (voice == null) {
+      return;
+    }
+    setState(() {
+      _selectedVoice = voice;
+    });
+  }
+
+  Future<void> _selectWorks() async {
+    final works = await showModalBottomSheet<List<ProfileMediaWork>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _CircleWorkPickerSheet(
+          availableWorks: _availableWorks,
+          selectedWorks: _selectedWorks,
+        );
+      },
+    );
+    if (works == null) {
+      return;
+    }
+    setState(() {
+      _selectedWorks = works;
+    });
+  }
+
+  Future<void> _submit() async {
+    final draft = _buildDraft();
+    if (!draft.hasAnyContent) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('请至少添加一项内容后再发布。')),
+        );
       return;
     }
 
-    final attachments = _attachments.toList();
-    if (attachmentNote.isNotEmpty) {
-      final label = attachmentNote.startsWith('http')
-          ? '链接: $attachmentNote'
-          : '素材: $attachmentNote';
-      attachments.add(label);
+    setState(() {
+      _isPublishing = true;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    if (!mounted) {
+      return;
     }
-
-    Navigator.of(context).pop(
-      _CirclePostDraft(
-        content: content.isEmpty ? '分享了一条新的圈子动态。' : content,
-        location: location.isEmpty ? '未设置定位' : location,
-        attachments: attachments,
-      ),
-    );
+    Navigator.of(context).pop(_CircleComposerResult.published(draft));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 12,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+    final theme = Theme.of(context);
+
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) {
+          return;
+        }
+        await _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppBrand.paper,
+        appBar: AppBar(
+          title: const Text('发布动态'),
+          leading: IconButton(
+            onPressed: _isPublishing ? null : () => _handleBack(),
+            icon: const Icon(Icons.close),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isPublishing ? null : () => _handleBack(),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text('保存草稿'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey<String>('circle-submit-post'),
+                  onPressed: _isPublishing ? null : _submit,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Text(_isPublishing ? '正在发布...' : '立即发布'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: SafeArea(
+          child: ListView(
+            key: const ValueKey<String>('circle-publish-scroll'),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Text(
+                  '发布页按全屏方式打开。地址、图片、语音和作品都会通过独立组件选择，退出时会自动保留草稿。',
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ComposerSection(
+                title: '文案',
+                description: '可选填写，最多 500 字；至少需要保留一项内容才可以发布。',
+                child: TextField(
+                  key: const ValueKey<String>('circle-post-content'),
+                  controller: _contentController,
+                  maxLines: 6,
+                  minLines: 4,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    hintText: '说说你此刻想分享的内容',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ComposerSection(
+                title: '地址选择',
+                description: '默认获取当前位置，也支持手动切换附近地点。',
+                child: InkWell(
+                  onTap: _selectLocation,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    key: const ValueKey<String>('circle-select-location'),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.place_outlined),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                _selectedLocation.title,
+                                style: theme.textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(_selectedLocation.address),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedLocation.detail,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ComposerSection(
+                title: '图片',
+                description: '通过图片组件选择拍照或相册内容，最多保留 9 张。',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      key: const ValueKey<String>('circle-add-images'),
+                      onPressed: _selectImages,
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text(
+                        _selectedImages.isEmpty ? '调用图片组件' : '重新选择图片',
+                      ),
+                    ),
+                    if (_selectedImages.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _selectedImages.map((image) {
+                          return InputChip(
+                            label:
+                                Text('${image.title} · ${image.sourceLabel}'),
+                            onDeleted: () {
+                              setState(() {
+                                _selectedImages.removeWhere(
+                                  (item) => item.id == image.id,
+                                );
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ComposerSection(
+                title: '语音',
+                description: '通过语音组件录制，保留试听与重录入口；发布时最多带 1 条。',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      key: const ValueKey<String>('circle-add-voice'),
+                      onPressed: _selectVoice,
+                      icon: const Icon(Icons.mic_none_outlined),
+                      label: Text(
+                        _selectedVoice == null ? '调用语音组件' : '重新录制语音',
+                      ),
+                    ),
+                    if (_selectedVoice != null) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(Icons.graphic_eq_outlined),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    _selectedVoice!.title,
+                                    style: theme.textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_selectedVoice!.durationLabel} · ${_selectedVoice!.summary}',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '已打开试听预览：${_selectedVoice!.title}',
+                                      ),
+                                    ),
+                                  );
+                              },
+                              child: const Text('试听'),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedVoice = null;
+                                });
+                              },
+                              icon: const Icon(Icons.delete_outline),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ComposerSection(
+                title: '作品',
+                description: '从“我的作品”里选择要带进动态的内容，当前支持语音、视频和图片作品。',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      key: const ValueKey<String>('circle-select-work'),
+                      onPressed: _selectWorks,
+                      icon: const Icon(Icons.collections_bookmark_outlined),
+                      label: Text(
+                        _availableWorks.isEmpty ? '暂无可选作品' : '调用作品组件',
+                      ),
+                    ),
+                    if (_availableWorks.isEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      const Text('你还没有可用于发布的作品，后续可先去“我的”里补充作品。'),
+                    ] else if (_selectedWorks.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Column(
+                        children: _selectedWorks.map((work) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: <Widget>[
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: const Color(0xFFF5E8DE),
+                                  foregroundColor: AppBrand.ink,
+                                  child: Text(
+                                    work.type.label.characters
+                                        .take(1)
+                                        .toString(),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        work.title,
+                                        style: theme.textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                          '${work.type.label} · ${work.summary}'),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedWorks.removeWhere(
+                                        (item) => item.id == work.id,
+                                      );
+                                    });
+                                  },
+                                  icon: const Icon(Icons.close),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerSection extends StatelessWidget {
+  const _ComposerSection({
+    required this.title,
+    required this.description,
+    required this.child,
+  });
+
+  final String title;
+  final String description;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            '发布圈子动态',
-            style: Theme.of(context).textTheme.titleLarge,
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
-          const Text('发布字段包含文案、定位，以及图片、语音、动图、网址等内容类型。'),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _contentController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '文案',
-              hintText: '说说你此刻想分享的内容',
-            ),
-          ),
+          const SizedBox(height: 6),
+          Text(description),
           const SizedBox(height: 14),
-          TextField(
-            controller: _locationController,
-            decoration: const InputDecoration(
-              labelText: '定位',
-              hintText: '输入你当前的位置',
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: const <String>['图片', '语音', '动图', '网址'].map((type) {
-              return FilterChip(
-                label: Text(type),
-                selected: _attachments.contains(type),
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _attachments.add(type);
-                    } else {
-                      _attachments.remove(type);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _attachmentNoteController,
-            decoration: const InputDecoration(
-              labelText: '素材说明或网址',
-              hintText: '可填写图片说明、语音备注或链接地址',
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _submit,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('立即发布'),
-            ),
-          ),
+          child,
         ],
+      ),
+    );
+  }
+}
+
+class _CircleLocationPickerSheet extends StatefulWidget {
+  const _CircleLocationPickerSheet({
+    required this.selected,
+  });
+
+  final _CircleLocationOption selected;
+
+  @override
+  State<_CircleLocationPickerSheet> createState() =>
+      _CircleLocationPickerSheetState();
+}
+
+class _CircleLocationPickerSheetState
+    extends State<_CircleLocationPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = _CirclePublishCatalog.locationOptions.where((option) {
+      final query = _query.trim();
+      if (query.isEmpty) {
+        return true;
+      }
+      return option.title.contains(query) ||
+          option.address.contains(query) ||
+          option.detail.contains(query);
+    }).toList(growable: false);
+
+    return FractionallySizedBox(
+      heightFactor: 0.78,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 12,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '地址选择',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text('默认优先获取当前位置，也支持手动挑选附近地点。'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _query = value;
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: '搜索附近地点',
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final option = options[index];
+                  final selected = option.id == widget.selected.id;
+                  return ListTile(
+                    key:
+                        ValueKey<String>('circle-location-option-${option.id}'),
+                    onTap: () => Navigator.of(context).pop(option),
+                    tileColor: selected
+                        ? const Color(0xFFF5E8DE)
+                        : const Color(0xFFF8FAFC),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    leading: Icon(
+                      option.id == 'current'
+                          ? Icons.my_location_outlined
+                          : Icons.place_outlined,
+                    ),
+                    title: Text(option.title),
+                    subtitle: Text('${option.address}\n${option.detail}'),
+                    isThreeLine: true,
+                    trailing: selected
+                        ? const Icon(Icons.check_circle, color: AppBrand.ink)
+                        : const Icon(Icons.chevron_right),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleImagePickerSheet extends StatefulWidget {
+  const _CircleImagePickerSheet({
+    required this.initialImages,
+  });
+
+  final List<_CircleImageAsset> initialImages;
+
+  @override
+  State<_CircleImagePickerSheet> createState() =>
+      _CircleImagePickerSheetState();
+}
+
+class _CircleImagePickerSheetState extends State<_CircleImagePickerSheet> {
+  late final Set<String> _selectedIds;
+  String _selectedSource = '相册';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.initialImages.map((image) => image.id).toSet();
+    final fromCamera = widget.initialImages.any(
+      (image) => image.sourceLabel == '拍照',
+    );
+    if (fromCamera) {
+      _selectedSource = '拍照';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = _CirclePublishCatalog.imageOptions.where((image) {
+      return image.sourceLabel == _selectedSource;
+    }).toList(growable: false);
+
+    return FractionallySizedBox(
+      heightFactor: 0.82,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '图片组件',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text('支持拍照和相册两种来源，当前先用结构化素材模拟选择与排序。'),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const <String>['相册', '拍照'].map((source) {
+                return ChoiceChip(
+                  label: Text(source),
+                  selected: _selectedSource == source,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedSource = source;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final image = options[index];
+                  final selected = _selectedIds.contains(image.id);
+                  return ListTile(
+                    key: ValueKey<String>('circle-image-option-${image.id}'),
+                    onTap: () {
+                      setState(() {
+                        if (selected) {
+                          _selectedIds.remove(image.id);
+                        } else if (_selectedIds.length < 9) {
+                          _selectedIds.add(image.id);
+                        }
+                      });
+                    },
+                    tileColor: selected
+                        ? const Color(0xFFF5E8DE)
+                        : const Color(0xFFF8FAFC),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFFFF7ED),
+                      foregroundColor: AppBrand.ink,
+                      child: Icon(image.icon),
+                    ),
+                    title: Text(image.title),
+                    subtitle: Text('${image.summary} · ${image.sourceLabel}'),
+                    trailing: selected
+                        ? const Icon(Icons.check_circle, color: AppBrand.ink)
+                        : const Icon(Icons.add_circle_outline),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const ValueKey<String>('circle-image-confirm'),
+              onPressed: () {
+                final images = _CirclePublishCatalog.imageOptions
+                    .where((image) => _selectedIds.contains(image.id))
+                    .toList(growable: false);
+                Navigator.of(context).pop(images);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Text('加入发布（${_selectedIds.length}/9）'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleVoiceRecorderSheet extends StatefulWidget {
+  const _CircleVoiceRecorderSheet({
+    required this.selectedVoice,
+  });
+
+  final _CircleVoiceDraft? selectedVoice;
+
+  @override
+  State<_CircleVoiceRecorderSheet> createState() =>
+      _CircleVoiceRecorderSheetState();
+}
+
+class _CircleVoiceRecorderSheetState extends State<_CircleVoiceRecorderSheet> {
+  _CircleVoiceDraft? _selectedVoice;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedVoice = widget.selectedVoice;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      heightFactor: 0.76,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '语音组件',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text('这里对应长按录音、试听和重录流程；当前版本先用录音模板模拟录制结果。'),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: _CirclePublishCatalog.voiceTemplates.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final voice = _CirclePublishCatalog.voiceTemplates[index];
+                  final selected = voice.id == _selectedVoice?.id;
+                  return ListTile(
+                    key: ValueKey<String>('circle-voice-option-${voice.id}'),
+                    onTap: () {
+                      setState(() {
+                        _selectedVoice = voice;
+                      });
+                    },
+                    tileColor: selected
+                        ? const Color(0xFFF5E8DE)
+                        : const Color(0xFFF8FAFC),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFFF7ED),
+                      foregroundColor: AppBrand.ink,
+                      child: Icon(Icons.mic_none_outlined),
+                    ),
+                    title: Text(voice.title),
+                    subtitle: Text('${voice.durationLabel} · ${voice.summary}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                SnackBar(content: Text('正在试听：${voice.title}')),
+                              );
+                          },
+                          child: const Text('试听'),
+                        ),
+                        if (selected)
+                          const Icon(Icons.check_circle, color: AppBrand.ink),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _selectedVoice == null
+                        ? null
+                        : () {
+                            setState(() {
+                              _selectedVoice = null;
+                            });
+                          },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('重录'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    key: const ValueKey<String>('circle-voice-confirm'),
+                    onPressed: _selectedVoice == null
+                        ? null
+                        : () => Navigator.of(context).pop(_selectedVoice),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('带入发布'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleWorkPickerSheet extends StatefulWidget {
+  const _CircleWorkPickerSheet({
+    required this.availableWorks,
+    required this.selectedWorks,
+  });
+
+  final List<ProfileMediaWork> availableWorks;
+  final List<ProfileMediaWork> selectedWorks;
+
+  @override
+  State<_CircleWorkPickerSheet> createState() => _CircleWorkPickerSheetState();
+}
+
+class _CircleWorkPickerSheetState extends State<_CircleWorkPickerSheet> {
+  late final Set<String> _selectedIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.selectedWorks.map((work) => work.id).toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      heightFactor: 0.82,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '作品组件',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text('从“我的作品”里挑选要带进动态的内容，发布后会以作品标签展示。'),
+            const SizedBox(height: 16),
+            if (widget.availableWorks.isEmpty)
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Text('当前还没有可用作品，先去“我的作品”添加语音、视频或图片作品吧。'),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  itemCount: widget.availableWorks.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final work = widget.availableWorks[index];
+                    final selected = _selectedIds.contains(work.id);
+                    return ListTile(
+                      key: ValueKey<String>('circle-work-option-${work.id}'),
+                      onTap: () {
+                        setState(() {
+                          if (selected) {
+                            _selectedIds.remove(work.id);
+                          } else {
+                            _selectedIds.add(work.id);
+                          }
+                        });
+                      },
+                      tileColor: selected
+                          ? const Color(0xFFF5E8DE)
+                          : const Color(0xFFF8FAFC),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFFFFF7ED),
+                        foregroundColor: AppBrand.ink,
+                        child:
+                            Text(work.type.label.characters.take(1).toString()),
+                      ),
+                      title: Text(work.title),
+                      subtitle: Text('${work.type.label} · ${work.summary}'),
+                      trailing: selected
+                          ? const Icon(Icons.check_circle, color: AppBrand.ink)
+                          : const Icon(Icons.add_circle_outline),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const ValueKey<String>('circle-work-confirm'),
+              onPressed: () {
+                final works = widget.availableWorks
+                    .where((work) => _selectedIds.contains(work.id))
+                    .toList(growable: false);
+                Navigator.of(context).pop(works);
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text('加入发布'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1083,14 +1964,215 @@ class _CirclePost {
   final int comments;
 }
 
+class _CircleComposerResult {
+  const _CircleComposerResult._({
+    this.savedDraft,
+    this.publishedDraft,
+  });
+
+  const _CircleComposerResult.saved(_CirclePostDraft draft)
+      : this._(savedDraft: draft);
+
+  const _CircleComposerResult.published(_CirclePostDraft draft)
+      : this._(publishedDraft: draft);
+
+  final _CirclePostDraft? savedDraft;
+  final _CirclePostDraft? publishedDraft;
+}
+
 class _CirclePostDraft {
   const _CirclePostDraft({
-    required this.content,
-    required this.location,
-    required this.attachments,
+    this.content = '',
+    this.location,
+    this.images = const <_CircleImageAsset>[],
+    this.voiceNote,
+    this.selectedWorks = const <ProfileMediaWork>[],
   });
 
   final String content;
-  final String location;
-  final List<String> attachments;
+  final _CircleLocationOption? location;
+  final List<_CircleImageAsset> images;
+  final _CircleVoiceDraft? voiceNote;
+  final List<ProfileMediaWork> selectedWorks;
+
+  _CircleLocationOption get locationOption {
+    return location ?? _CirclePublishCatalog.locationOptions.first;
+  }
+
+  bool get hasAnyContent {
+    return content.trim().isNotEmpty ||
+        images.isNotEmpty ||
+        voiceNote != null ||
+        selectedWorks.isNotEmpty;
+  }
+
+  String get displayContent {
+    final text = content.trim();
+    if (text.isNotEmpty) {
+      return text;
+    }
+    if (selectedWorks.isNotEmpty) {
+      return '分享了 ${selectedWorks.length} 个作品，欢迎来看看最想聊哪一个。';
+    }
+    if (voiceNote != null) {
+      return '分享了一段刚录好的语音动态，欢迎来圈子里互动。';
+    }
+    if (images.isNotEmpty) {
+      return '分享了 ${images.length} 张刚拍好的内容，欢迎来看看。';
+    }
+    return '分享了一条新的圈子动态。';
+  }
+
+  List<String> get attachmentLabels {
+    final labels = <String>[];
+    if (images.isNotEmpty) {
+      labels.add('图片 ${images.length}张');
+    }
+    if (voiceNote != null) {
+      labels.add('语音 ${voiceNote!.durationLabel}');
+    }
+    if (selectedWorks.isNotEmpty) {
+      labels.add(
+        selectedWorks.length == 1
+            ? '作品 ${selectedWorks.first.title}'
+            : '作品 ${selectedWorks.length}个',
+      );
+    }
+    return labels;
+  }
+}
+
+class _CircleLocationOption {
+  const _CircleLocationOption({
+    required this.id,
+    required this.title,
+    required this.address,
+    required this.detail,
+  });
+
+  final String id;
+  final String title;
+  final String address;
+  final String detail;
+}
+
+class _CircleImageAsset {
+  const _CircleImageAsset({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.sourceLabel,
+    required this.icon,
+  });
+
+  final String id;
+  final String title;
+  final String summary;
+  final String sourceLabel;
+  final IconData icon;
+}
+
+class _CircleVoiceDraft {
+  const _CircleVoiceDraft({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.durationSeconds,
+  });
+
+  final String id;
+  final String title;
+  final String summary;
+  final int durationSeconds;
+
+  String get durationLabel => '$durationSeconds秒';
+}
+
+class _CirclePublishCatalog {
+  static const List<_CircleLocationOption> locationOptions =
+      <_CircleLocationOption>[
+    _CircleLocationOption(
+      id: 'current',
+      title: '当前位置',
+      address: '上海·徐汇·武康路',
+      detail: '距你 120m · 自动获取',
+    ),
+    _CircleLocationOption(
+      id: 'anfu',
+      title: '安福路路口',
+      address: '上海·徐汇·安福路',
+      detail: '距你 420m · 附近热门',
+    ),
+    _CircleLocationOption(
+      id: 'west-lake',
+      title: '西湖音乐喷泉',
+      address: '杭州·西湖',
+      detail: '距你 2.4km · 手动选择',
+    ),
+    _CircleLocationOption(
+      id: 'jinji-lake',
+      title: '金鸡湖步道',
+      address: '苏州·园区',
+      detail: '距你 4.1km · 手动选择',
+    ),
+  ];
+
+  static const List<_CircleImageAsset> imageOptions = <_CircleImageAsset>[
+    _CircleImageAsset(
+      id: 'night-street',
+      title: '夜景街拍',
+      summary: '适合展示附近氛围感',
+      sourceLabel: '相册',
+      icon: Icons.photo_library_outlined,
+    ),
+    _CircleImageAsset(
+      id: 'coffee-table',
+      title: '咖啡桌面',
+      summary: '安静聊天向内容',
+      sourceLabel: '相册',
+      icon: Icons.image_outlined,
+    ),
+    _CircleImageAsset(
+      id: 'cat-window',
+      title: '窗边剪影',
+      summary: '适合配文案和定位',
+      sourceLabel: '相册',
+      icon: Icons.collections_outlined,
+    ),
+    _CircleImageAsset(
+      id: 'camera-selfie',
+      title: '刚拍的自拍',
+      summary: '模拟拍照组件返回结果',
+      sourceLabel: '拍照',
+      icon: Icons.camera_alt_outlined,
+    ),
+    _CircleImageAsset(
+      id: 'camera-street',
+      title: '随手拍街景',
+      summary: '模拟拍照后直接带入发布',
+      sourceLabel: '拍照',
+      icon: Icons.add_a_photo_outlined,
+    ),
+  ];
+
+  static const List<_CircleVoiceDraft> voiceTemplates = <_CircleVoiceDraft>[
+    _CircleVoiceDraft(
+      id: 'voice-good-night',
+      title: '轻声晚安',
+      summary: '适合睡前互动的一段语音',
+      durationSeconds: 18,
+    ),
+    _CircleVoiceDraft(
+      id: 'voice-city',
+      title: '城市夜风',
+      summary: '用语音描述此刻的街头氛围',
+      durationSeconds: 26,
+    ),
+    _CircleVoiceDraft(
+      id: 'voice-intro',
+      title: '一句自我介绍',
+      summary: '适合新朋友快速认识你',
+      durationSeconds: 12,
+    ),
+  ];
 }
