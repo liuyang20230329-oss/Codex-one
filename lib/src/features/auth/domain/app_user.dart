@@ -3,6 +3,8 @@ import 'profile_media_work.dart';
 import 'user_gender.dart';
 import 'verification_status.dart';
 
+/// Immutable user aggregate used by the app shell, account center, square,
+/// circle, and chat features.
 class AppUser {
   static const String defaultCity = '未设置地区';
   static const String defaultSignature = '这个人很酷，还没有留下签名。';
@@ -45,6 +47,9 @@ class AppUser {
   bool get canAppearInRecommendations => verification.faceStatus.isVerified;
   bool get hasCustomSignature => signature.trim() != defaultSignature;
   bool get hasIntroVideo => introVideoTitle.trim() != defaultIntroVideoTitle;
+
+  /// Age is derived from the configured birth year/month so profile editing
+  /// only needs to store one canonical birthday payload.
   int? get age {
     final year = birthYear;
     final month = birthMonth;
@@ -61,6 +66,9 @@ class AppUser {
   }
 
   String get ageLabel => age == null ? '未设置' : '${age!}岁';
+
+  /// Completeness is intentionally weighted toward media and self-introduction,
+  /// because those fields matter most for social conversion in this prototype.
   double get profileCompletion {
     var score = 0.0;
     if (avatarKey.trim().isNotEmpty) {

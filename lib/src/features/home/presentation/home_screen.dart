@@ -10,6 +10,8 @@ import '../../auth/presentation/auth_controller.dart';
 import '../../chat/presentation/chat_controller.dart';
 import '../../chat/presentation/chat_screen.dart';
 
+/// Hosts the four main modules and keeps the page shell synchronized with the
+/// latest user and chat state.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -31,11 +33,32 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const List<_HomeTabMeta> _tabs = <_HomeTabMeta>[
+    _HomeTabMeta(
+      label: '广场',
+      subtitle: '高信任推荐、平台通知与筛选结果都收在这里。',
+    ),
+    _HomeTabMeta(
+      label: '圈子',
+      subtitle: '附近动态、发布入口和内容互动集中在这一层。',
+    ),
+    _HomeTabMeta(
+      label: '消息',
+      subtitle: '关系分组、红点提醒和聊天会话统一收口。',
+    ),
+    _HomeTabMeta(
+      label: '我的',
+      subtitle: '个人资料、认证进度和账号设置从这里继续完善。',
+    ),
+  ];
+
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    // Chat data depends on the current user profile, so it is refreshed when
+    // the shell first mounts.
     widget.chatController.syncUser(widget.user);
   }
 
@@ -48,6 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _didUserContextChange(AppUser previous, AppUser next) {
+    // Any profile or verification change can affect recommendation weight,
+    // chat permissions, or avatar rendering, so those updates are treated as
+    // a full context refresh.
     return previous.id != next.id ||
         previous.name != next.name ||
         previous.avatarKey != next.avatarKey ||
@@ -73,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, _) {
         final user = widget.controller.currentUser ?? widget.user;
         final unreadCount = widget.chatController.totalUnreadCount;
+        final selectedTab = _tabs[_selectedIndex];
         final screens = <Widget>[
           PlazaTab(
             user: user,
@@ -89,14 +116,222 @@ class _HomeScreenState extends State<HomeScreen> {
             user: user,
           ),
         ];
-        final titles = <String>['广场', '圈子', '消息', '我的'];
         final palette = tonePaletteFor(user.gender);
 
         return Scaffold(
-          backgroundColor: AppBrand.paper,
-          appBar: AppBar(
-            titleSpacing: 20,
-            title: Column(
+          backgroundColor: palette.primary,
+          body: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: palette.shellGradient,
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _HomeShellHeader(
+                      user: user,
+                      palette: palette,
+                      selectedLabel: selectedTab.label,
+                      selectedSubtitle: selectedTab.subtitle,
+                      unreadCount: unreadCount,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: palette.canvas,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(34),
+                        ),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.10),
+                            blurRadius: 30,
+                            offset: const Offset(0, -8),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(34),
+                        ),
+                        child: IndexedStack(
+                          index: _selectedIndex,
+                          children: screens,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: palette.cardBackground.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: palette.outline),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                height: 74,
+                backgroundColor: Colors.transparent,
+                indicatorColor: palette.highlight,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                destinations: <Widget>[
+                  const NavigationDestination(
+                    icon: Icon(Icons.explore_outlined),
+                    selectedIcon: Icon(Icons.explore),
+                    label: '广场',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.bubble_chart_outlined),
+                    selectedIcon: Icon(Icons.bubble_chart),
+                    label: '圈子',
+                  ),
+                  NavigationDestination(
+                    icon: unreadCount > 0
+                        ? Badge.count(
+                            count: unreadCount,
+                            child: const Icon(Icons.chat_bubble_outline),
+                          )
+                        : const Icon(Icons.chat_bubble_outline),
+                    selectedIcon: unreadCount > 0
+                        ? Badge.count(
+                            count: unreadCount,
+                            child: const Icon(Icons.chat_bubble),
+                          )
+                        : const Icon(Icons.chat_bubble),
+                    label: '消息',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: '我的',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeTabMeta {
+  const _HomeTabMeta({
+    required this.label,
+    required this.subtitle,
+  });
+
+  final String label;
+  final String subtitle;
+}
+
+class _HomeShellHeader extends StatelessWidget {
+  const _HomeShellHeader({
+    required this.user,
+    required this.palette,
+    required this.selectedLabel,
+    required this.selectedSubtitle,
+    required this.unreadCount,
+  });
+
+  final AppUser user;
+  final UserTonePalette palette;
+  final String selectedLabel;
+  final String selectedSubtitle;
+  final int unreadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  AppBrand.brandName,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.74),
+                        letterSpacing: 1.1,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  selectedLabel,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  selectedSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.82),
+                      ),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    _HeaderPill(label: user.gender.label),
+                    _HeaderPill(label: '认证 ${user.verificationProgress}/3'),
+                    _HeaderPill(
+                      label: unreadCount > 0 ? '新消息 $unreadCount' : '消息已读',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 108,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[
+                  Colors.white.withValues(alpha: 0.20),
+                  Colors.white.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
@@ -104,71 +339,65 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
                       ),
                 ),
+                const SizedBox(height: 12),
                 Text(
-                  titles[_selectedIndex],
+                  _toneDescriptor(user.gender),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.84),
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  user.canSendPrivateMessages ? '私聊已开启' : '待完成手机号认证',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white70,
+                        color: Colors.white.withValues(alpha: 0.72),
                       ),
                 ),
               ],
             ),
-            backgroundColor: AppBrand.ink,
-            foregroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
           ),
-          body: SafeArea(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: screens,
+        ],
+      ),
+    );
+  }
+
+  String _toneDescriptor(UserGender gender) {
+    switch (gender) {
+      case UserGender.male:
+        return '深色社交';
+      case UserGender.female:
+        return '温柔暖调';
+      case UserGender.nonBinary:
+        return '夜色紫调';
+      case UserGender.undisclosed:
+        return '中性简约';
+    }
+  }
+}
+
+class _HeaderPill extends StatelessWidget {
+  const _HeaderPill({
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white,
             ),
-          ),
-          bottomNavigationBar: NavigationBar(
-            backgroundColor: Colors.white,
-            indicatorColor: palette.surface,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            destinations: <Widget>[
-              const NavigationDestination(
-                icon: Icon(Icons.explore_outlined),
-                selectedIcon: Icon(Icons.explore),
-                label: '广场',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.bubble_chart_outlined),
-                selectedIcon: Icon(Icons.bubble_chart),
-                label: '圈子',
-              ),
-              NavigationDestination(
-                icon: unreadCount > 0
-                    ? Badge.count(
-                        count: unreadCount,
-                        child: const Icon(Icons.chat_bubble_outline),
-                      )
-                    : const Icon(Icons.chat_bubble_outline),
-                selectedIcon: unreadCount > 0
-                    ? Badge.count(
-                        count: unreadCount,
-                        child: const Icon(Icons.chat_bubble),
-                      )
-                    : const Icon(Icons.chat_bubble),
-                label: '消息',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: '我的',
-              ),
-            ],
-          ),
-        );
-      },
+      ),
     );
   }
 }
@@ -260,6 +489,52 @@ class _PlazaTabState extends State<PlazaTab> {
     ),
   ];
 
+  ChoiceChip _buildChoiceChip({
+    required UserTonePalette palette,
+    required String label,
+    required bool selected,
+    required VoidCallback onSelected,
+  }) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      backgroundColor: palette.cardBackground,
+      selectedColor: palette.primary,
+      side: BorderSide(
+        color: selected ? palette.primary : palette.outline,
+      ),
+      labelStyle: TextStyle(
+        color: selected ? palette.foreground : AppBrand.ink,
+        fontWeight: FontWeight.w700,
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+
+  FilterChip _buildGenderChip({
+    required UserTonePalette palette,
+    required String label,
+    required bool selected,
+    required VoidCallback onSelected,
+  }) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      backgroundColor: palette.cardBackground,
+      selectedColor: palette.secondary,
+      side: BorderSide(
+        color: selected ? palette.secondary : palette.outline,
+      ),
+      labelStyle: TextStyle(
+        color: selected ? palette.foreground : AppBrand.ink,
+        fontWeight: FontWeight.w700,
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = tonePaletteFor(widget.user.gender);
@@ -286,10 +561,16 @@ class _PlazaTabState extends State<PlazaTab> {
       });
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
+        const _SectionHeadline(
+          eyebrow: '广场推荐',
+          title: '更像真实社交首页的筛选与推荐',
+          description: '先给你可信推荐和平台通知，再让你继续收窄地区、年龄和性别范围。',
+        ),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 170,
+          height: 190,
           child: PageView(
             children: <Widget>[
               _BannerCard(
@@ -310,109 +591,161 @@ class _PlazaTabState extends State<PlazaTab> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _SummaryMetricCard(
+                palette: palette,
+                label: '候选人数',
+                value: '${visibleProfiles.length}',
+                hint: '当前筛选结果',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SummaryMetricCard(
+                palette: palette,
+                label: '可信用户',
+                value:
+                    '${visibleProfiles.where((item) => item.isVerified).length}',
+                hint: '已真人/实名',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
         _StatusCard(
+          palette: palette,
           label: widget.statusLabel,
           message: widget.statusMessage,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         _NoticeCard(
+          palette: palette,
           notices: const <String>[
             '平台通知：今日推荐优先展示资料完整、活跃度高、认证更充分的用户。',
             '系统提醒：圈子动态支持文案、地址、图片、语音和作品，素材统一通过组件选择。',
             '版本更新：消息页已拆分为关系模块和对话列表，红点提醒已同步生效。',
           ],
         ),
-        const SizedBox(height: 20),
-        Text(
-          '筛选用户',
-          style: Theme.of(context).textTheme.titleMedium,
+        const SizedBox(height: 22),
+        const _SectionHeadline(
+          eyebrow: '筛选器',
+          title: '按地区、年龄与性别继续收窄范围',
+          description: '当前排序会优先展示已认证、在线且更适合即时互动的用户。',
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _regions.map((region) {
-            return ChoiceChip(
-              label: Text(region),
-              selected: _selectedRegion == region,
-              onSelected: (_) {
-                setState(() {
-                  _selectedRegion = region;
-                });
-              },
-            );
-          }).toList(),
+        _TonePanel(
+          palette: palette,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                '地区',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _regions.map((region) {
+                  return _buildChoiceChip(
+                    palette: palette,
+                    label: region,
+                    selected: _selectedRegion == region,
+                    onSelected: () {
+                      setState(() {
+                        _selectedRegion = region;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '年龄',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _ageRanges.map((range) {
+                  return _buildChoiceChip(
+                    palette: palette,
+                    label: range,
+                    selected: _selectedAge == range,
+                    onSelected: () {
+                      setState(() {
+                        _selectedAge = range;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '性别',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  _buildGenderChip(
+                    palette: palette,
+                    label: '男生',
+                    selected: _selectedGender == UserGender.male,
+                    onSelected: () {
+                      setState(() {
+                        _selectedGender = _selectedGender == UserGender.male
+                            ? null
+                            : UserGender.male;
+                      });
+                    },
+                  ),
+                  _buildGenderChip(
+                    palette: palette,
+                    label: '女生',
+                    selected: _selectedGender == UserGender.female,
+                    onSelected: () {
+                      setState(() {
+                        _selectedGender = _selectedGender == UserGender.female
+                            ? null
+                            : UserGender.female;
+                      });
+                    },
+                  ),
+                  _buildGenderChip(
+                    palette: palette,
+                    label: '多元',
+                    selected: _selectedGender == UserGender.nonBinary,
+                    onSelected: () {
+                      setState(() {
+                        _selectedGender =
+                            _selectedGender == UserGender.nonBinary
+                                ? null
+                                : UserGender.nonBinary;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _ageRanges.map((range) {
-            return ChoiceChip(
-              label: Text(range),
-              selected: _selectedAge == range,
-              onSelected: (_) {
-                setState(() {
-                  _selectedAge = range;
-                });
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            FilterChip(
-              label: const Text('男生'),
-              selected: _selectedGender == UserGender.male,
-              onSelected: (_) {
-                setState(() {
-                  _selectedGender = _selectedGender == UserGender.male
-                      ? null
-                      : UserGender.male;
-                });
-              },
-            ),
-            FilterChip(
-              label: const Text('女生'),
-              selected: _selectedGender == UserGender.female,
-              onSelected: (_) {
-                setState(() {
-                  _selectedGender = _selectedGender == UserGender.female
-                      ? null
-                      : UserGender.female;
-                });
-              },
-            ),
-            FilterChip(
-              label: const Text('多元'),
-              selected: _selectedGender == UserGender.nonBinary,
-              onSelected: (_) {
-                setState(() {
-                  _selectedGender = _selectedGender == UserGender.nonBinary
-                      ? null
-                      : UserGender.nonBinary;
-                });
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Text(
-          '用户信息列表',
-          style: Theme.of(context).textTheme.titleMedium,
+        const SizedBox(height: 22),
+        const _SectionHeadline(
+          eyebrow: '附近列表',
+          title: '值得先点开的用户卡片',
+          description: '下面按可信度、在线状态和活跃倾向做了轻排序，方便先测推荐体验。',
         ),
         const SizedBox(height: 12),
         if (visibleProfiles.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-            ),
+          _TonePanel(
+            palette: palette,
             child: const Text('当前筛选条件下还没有匹配用户，换个地区或年龄看看。'),
           ),
         for (final profile in visibleProfiles) ...<Widget>[
@@ -545,32 +878,54 @@ class _CircleTabState extends State<CircleTab> {
     return Stack(
       children: <Widget>[
         ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 108),
           children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                borderRadius: BorderRadius.circular(26),
-              ),
+            const _SectionHeadline(
+              eyebrow: '圈子动态',
+              title: '附近内容流要有氛围，也要有发布秩序',
+              description: '动态入口保留全屏发布方式，地址、图片、语音和作品都继续通过独立组件挑选。',
+            ),
+            const SizedBox(height: 18),
+            _TonePanel(
+              palette: palette,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    '附近圈子动态',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '这里展示附近的人发布的动态内容。发布页会以全屏方式打开，地址、图片、语音和作品都通过独立组件选择。',
+                    '发布前建议先补齐头像、签名和认证信息，这样你的动态会更容易被认真浏览。',
                     style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _SummaryMetricCard(
+                          palette: palette,
+                          label: '附近动态',
+                          value: '${_posts.length}',
+                          hint: '已进入内容流',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SummaryMetricCard(
+                          palette: palette,
+                          label: '可发布素材',
+                          value: '5项',
+                          hint: '文案 / 地址 / 图片 / 语音 / 作品',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 18),
             for (final post in _posts) ...<Widget>[
-              _CirclePostCard(post: post),
+              _CirclePostCard(
+                post: post,
+                palette: palette,
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -610,24 +965,41 @@ class _BannerCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[palette.primary, palette.secondary],
-          ),
+          gradient: palette.heroGradient,
           borderRadius: BorderRadius.circular(30),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: palette.secondary.withValues(alpha: 0.20),
+              blurRadius: 24,
+              offset: const Offset(0, 14),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                '37° 广场',
-                style: TextStyle(color: Colors.white),
-              ),
+            Row(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    '37° 广场',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                ),
+              ],
             ),
             const Spacer(),
             Text(
@@ -652,21 +1024,20 @@ class _BannerCard extends StatelessWidget {
 
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
+    required this.palette,
     required this.label,
     required this.message,
   });
 
+  final UserTonePalette palette;
   final String label;
   final String message;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return _TonePanel(
+      palette: palette,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -684,19 +1055,18 @@ class _StatusCard extends StatelessWidget {
 
 class _NoticeCard extends StatelessWidget {
   const _NoticeCard({
+    required this.palette,
     required this.notices,
   });
 
+  final UserTonePalette palette;
   final List<String> notices;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return _TonePanel(
+      palette: palette,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -742,8 +1112,16 @@ class _PlazaUserCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.cardBackground,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.outline),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: palette.primary.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -797,7 +1175,7 @@ class _PlazaUserCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: palette.surface,
+                      color: palette.highlight,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(profile.distance),
@@ -810,7 +1188,7 @@ class _PlazaUserCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: profile.isVerified
-                          ? palette.surface
+                          ? palette.highlight
                           : const Color(0xFFF6EDE5),
                       borderRadius: BorderRadius.circular(999),
                     ),
@@ -847,17 +1225,27 @@ class _PlazaUserCard extends StatelessWidget {
 class _CirclePostCard extends StatelessWidget {
   const _CirclePostCard({
     required this.post,
+    required this.palette,
   });
 
   final _CirclePost post;
+  final UserTonePalette palette;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.cardBackground,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.outline),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: palette.primary.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,8 +1253,8 @@ class _CirclePostCard extends StatelessWidget {
           Row(
             children: <Widget>[
               CircleAvatar(
-                backgroundColor: const Color(0xFFFFF7ED),
-                foregroundColor: const Color(0xFFF97316),
+                backgroundColor: palette.surface,
+                foregroundColor: palette.primary,
                 child: Text(post.authorName.characters.take(1).toString()),
               ),
               const SizedBox(width: 12),
@@ -891,7 +1279,7 @@ class _CirclePostCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5E8DE),
+                  color: palette.highlight,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(post.verificationLabel),
@@ -909,7 +1297,7 @@ class _CirclePostCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: palette.surface,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(attachment),
@@ -931,6 +1319,131 @@ class _CirclePostCard extends StatelessWidget {
               const SizedBox(width: 16),
               const Icon(Icons.flag_outlined, size: 18),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TonePanel extends StatelessWidget {
+  const _TonePanel({
+    required this.palette,
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+  });
+
+  final UserTonePalette palette;
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: palette.outline),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: palette.primary.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionHeadline extends StatelessWidget {
+  const _SectionHeadline({
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          eyebrow,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppBrand.ink.withValues(alpha: 0.56),
+                letterSpacing: 0.8,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          description,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppBrand.ink.withValues(alpha: 0.70),
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryMetricCard extends StatelessWidget {
+  const _SummaryMetricCard({
+    required this.palette,
+    required this.label,
+    required this.value,
+    required this.hint,
+  });
+
+  final UserTonePalette palette;
+  final String label;
+  final String value;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: palette.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: palette.mutedForeground,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppBrand.ink.withValues(alpha: 0.60),
+                ),
           ),
         ],
       ),

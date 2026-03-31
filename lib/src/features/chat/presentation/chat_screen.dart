@@ -9,6 +9,8 @@ import '../domain/chat_inbox_segment.dart';
 import '../domain/chat_message_type.dart';
 import 'chat_controller.dart';
 
+/// Renders the relationship inbox and the selected conversation detail while
+/// keeping composer drafts scoped per conversation.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -225,6 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _syncComposerWithConversation(String conversationId) {
+    // Drafts are stored per conversation so users can switch threads without
+    // losing what they were typing.
     if (_lastConversationId == conversationId) {
       return;
     }
@@ -268,27 +272,49 @@ class _ChatScreenState extends State<ChatScreen> {
         return Column(
           children: <Widget>[
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Row(
-                children: <Widget>[
-                  IconButton.filledTonal(
-                    onPressed: widget.controller.closeConversation,
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          selectedConversation.title,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(selectedConversation.subtitle),
-                      ],
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: palette.cardBackground,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: palette.outline),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    IconButton.filledTonal(
+                      onPressed: widget.controller.closeConversation,
+                      icon: const Icon(Icons.arrow_back),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            selectedConversation.title,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            selectedConversation.subtitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: palette.mutedForeground,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (selectedConversation.isPinned)
+                      Icon(
+                        Icons.push_pin_rounded,
+                        color: palette.primary,
+                      ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -304,10 +330,14 @@ class _ChatScreenState extends State<ChatScreen> {
                         isMine ? Alignment.centerRight : Alignment.centerLeft,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      child: DecoratedBox(
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: isMine ? palette.primary : Colors.white,
+                          color:
+                              isMine ? palette.primary : palette.cardBackground,
                           borderRadius: BorderRadius.circular(22),
+                          border: isMine
+                              ? null
+                              : Border.all(color: palette.outline),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -327,7 +357,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                     ),
                               ),
-                              if (message.type != ChatMessageType.text) ...<Widget>[
+                              if (message.type !=
+                                  ChatMessageType.text) ...<Widget>[
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -640,12 +671,12 @@ class _ConversationListView extends StatelessWidget {
             .toList();
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       children: <Widget>[
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: palette.surface,
+            gradient: palette.heroGradient,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Column(
@@ -653,7 +684,9 @@ class _ConversationListView extends StatelessWidget {
             children: <Widget>[
               Text(
                 '消息列表',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                    ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -669,7 +702,9 @@ class _ConversationListView extends StatelessWidget {
                       user.canSendPrivateMessages
                           ? '上方是关系分类，下面是聊天对话消息。有新消息时会显示红点提醒。'
                           : '上方是关系分类，下面是聊天对话消息。完成手机号认证后，可正式发起和回复私聊。',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.84),
+                          ),
                     ),
                   ),
                 ],
@@ -686,6 +721,10 @@ class _ConversationListView extends StatelessWidget {
               onPressed: onCreateConversation,
               icon: const Icon(Icons.add_comment_outlined),
               label: const Text('新建会话'),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: palette.cardBackground,
+                side: BorderSide(color: palette.outline),
+              ),
             ),
             TextButton.icon(
               onPressed:
@@ -742,8 +781,9 @@ class _ConversationListView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: palette.cardBackground,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.outline),
             ),
             child: const Text('当前分类下还没有对话，先去广场或圈子里认识新朋友吧。'),
           ),
@@ -873,139 +913,163 @@ class _ConversationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: palette.cardBackground,
       borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: <Widget>[
-              Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: palette.surface,
-                    foregroundColor: palette.primary,
-                    child: Text(
-                      conversation.title.characters.take(1).toString(),
-                    ),
-                  ),
-                  if (conversation.unreadCount > 0)
-                    const Positioned(
-                      right: -2,
-                      top: -2,
-                      child: CircleAvatar(
-                        radius: 6,
-                        backgroundColor: Colors.redAccent,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: palette.outline),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: palette.primary.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: <Widget>[
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: palette.surface,
+                      foregroundColor: palette.primary,
+                      child: Text(
+                        conversation.title.characters.take(1).toString(),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            conversation.title,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+                    if (conversation.unreadCount > 0)
+                      const Positioned(
+                        right: -2,
+                        top: -2,
+                        child: CircleAvatar(
+                          radius: 6,
+                          backgroundColor: Colors.redAccent,
                         ),
-                        Text(
-                          _conversationTimeLabel(conversation.updatedAt),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (conversation.isPinned) ...<Widget>[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.push_pin_rounded,
-                            size: 16,
-                            color: palette.primary,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              conversation.title,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ),
-                        ],
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                          Text(
+                            _conversationTimeLabel(conversation.updatedAt),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: palette.mutedForeground,
+                                    ),
                           ),
-                          decoration: BoxDecoration(
-                            color: palette.surface,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(conversation.categoryLabel),
-                        ),
-                        if (!_canCurrentUserSend(
-                            user, conversation)) ...<Widget>[
-                          const SizedBox(width: 8),
+                          if (conversation.isPinned) ...<Widget>[
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.push_pin_rounded,
+                              size: 16,
+                              color: palette.primary,
+                            ),
+                          ],
+                          const SizedBox(width: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF5E8DE),
+                              color: palette.highlight,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Text('待认证'),
+                            child: Text(conversation.categoryLabel),
                           ),
-                        ],
-                        PopupMenuButton<_ConversationAction>(
-                          tooltip: '会话操作',
-                          onSelected: onActionSelected,
-                          itemBuilder: (context) => <PopupMenuEntry<_ConversationAction>>[
-                            PopupMenuItem<_ConversationAction>(
-                              value: _ConversationAction.pin,
-                              child: Text(conversation.isPinned ? '取消置顶' : '置顶会话'),
-                            ),
-                            const PopupMenuItem<_ConversationAction>(
-                              value: _ConversationAction.delete,
-                              child: Text('删除会话'),
+                          if (!_canCurrentUserSend(
+                              user, conversation)) ...<Widget>[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5E8DE),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text('待认证'),
                             ),
                           ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            conversation.subtitle,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        if (conversation.isOnline) ...<Widget>[
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.circle,
-                            size: 10,
-                            color: Color(0xFF16A34A),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '在线',
-                            style: Theme.of(context).textTheme.bodySmall,
+                          PopupMenuButton<_ConversationAction>(
+                            tooltip: '会话操作',
+                            onSelected: onActionSelected,
+                            itemBuilder: (context) =>
+                                <PopupMenuEntry<_ConversationAction>>[
+                              PopupMenuItem<_ConversationAction>(
+                                value: _ConversationAction.pin,
+                                child: Text(
+                                  conversation.isPinned ? '取消置顶' : '置顶会话',
+                                ),
+                              ),
+                              const PopupMenuItem<_ConversationAction>(
+                                value: _ConversationAction.delete,
+                                child: Text('删除会话'),
+                              ),
+                            ],
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      conversation.lastMessagePreview,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              conversation.subtitle,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: palette.mutedForeground,
+                                  ),
+                            ),
+                          ),
+                          if (conversation.isOnline) ...<Widget>[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.circle,
+                              size: 10,
+                              color: Color(0xFF16A34A),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '在线',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        conversation.lastMessagePreview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -9,6 +9,8 @@ import '../../auth/domain/verification_status.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../auth/presentation/widgets/auth_validators.dart';
 
+/// Presents the full account center, including profile editing, verification,
+/// works management, and basic settings.
 class AccountScreen extends StatefulWidget {
   const AccountScreen({
     super.key,
@@ -177,6 +179,8 @@ class _AccountScreenState extends State<AccountScreen> {
     BuildContext context,
     AppUser currentUser,
   ) async {
+    // Profile edits feed recommendation display, verification labels, and the
+    // chat/account headers, so they are routed through one controller update.
     final draft = await showModalBottomSheet<_ProfileDraft>(
       context: context,
       isScrollControlled: true,
@@ -584,6 +588,7 @@ class _ProfileSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarOption = avatarOptionFor(user.avatarKey);
     return _SectionCard(
+      palette: palette,
       title: '个人信息',
       actionLabel: '编辑',
       onAction: onEdit,
@@ -675,6 +680,7 @@ class _IntroVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      palette: palette,
       title: '视频介绍',
       actionLabel: '编辑',
       onAction: onEdit,
@@ -731,6 +737,7 @@ class _WorksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      palette: palette,
       title: '我的作品',
       actionLabel: '新增',
       onAction: onAdd,
@@ -872,6 +879,7 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
+      palette: palette,
       title: '基础设置',
       child: Column(
         children: <Widget>[
@@ -933,8 +941,9 @@ class _VerificationActionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.cardBackground,
         borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: palette.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -979,12 +988,14 @@ class _VerificationActionCard extends StatelessWidget {
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
+    required this.palette,
     required this.title,
     this.actionLabel,
     this.onAction,
     required this.child,
   });
 
+  final UserTonePalette palette;
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -995,8 +1006,9 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: palette.cardBackground,
         borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: palette.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

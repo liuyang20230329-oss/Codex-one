@@ -7,6 +7,8 @@ import 'src/features/auth/presentation/auth_controller.dart';
 import 'src/features/auth/presentation/auth_gate.dart';
 import 'src/features/chat/presentation/chat_controller.dart';
 
+/// Top-level application shell that wires bootstrap dependencies into the auth
+/// and chat flows.
 class CodexOneApp extends StatefulWidget {
   const CodexOneApp({
     super.key,

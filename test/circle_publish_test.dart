@@ -73,10 +73,12 @@ void main() {
       );
       expect(find.text('动图'), findsNothing);
       expect(find.text('网址'), findsNothing);
-      final publishScrollable = find.descendant(
-        of: find.byKey(const ValueKey<String>('circle-publish-scroll')),
-        matching: find.byType(Scrollable),
-      ).first;
+      final publishScrollable = find
+          .descendant(
+            of: find.byKey(const ValueKey<String>('circle-publish-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
 
       await tester.enterText(
         find.byKey(const ValueKey<String>('circle-post-content')),
@@ -96,21 +98,24 @@ void main() {
         240,
         scrollable: publishScrollable,
       );
-      expect(find.byKey(const ValueKey<String>('circle-add-images')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('circle-add-images')),
+          findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey<String>('circle-add-voice')),
         240,
         scrollable: publishScrollable,
       );
-      expect(find.byKey(const ValueKey<String>('circle-add-voice')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('circle-add-voice')),
+          findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey<String>('circle-select-work')),
         240,
         scrollable: publishScrollable,
       );
-      expect(find.byKey(const ValueKey<String>('circle-select-work')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('circle-select-work')),
+          findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey<String>('circle-submit-post')),
@@ -121,6 +126,13 @@ void main() {
         find.byKey(const ValueKey<String>('circle-submit-post')).hitTestable(),
       );
       await tester.pumpAndSettle();
+
+      final circleScrollable = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(
+        find.text('今晚在附近散步，发一条带图片、语音和作品的动态。'),
+        240,
+        scrollable: circleScrollable,
+      );
 
       expect(find.text('今晚在附近散步，发一条带图片、语音和作品的动态。'), findsOneWidget);
       expect(find.textContaining('上海·徐汇·武康路'), findsOneWidget);

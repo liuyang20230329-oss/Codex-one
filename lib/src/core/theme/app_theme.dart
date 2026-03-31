@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../brand/app_brand.dart';
 
+/// Central app theme for controls that are shared across auth, home, chat,
+/// and account screens. Per-gender visual tone is layered on top in the
+/// feature screens through [UserTonePalette].
 class AppTheme {
   static ThemeData light() {
     const seed = AppBrand.ink;
@@ -17,6 +20,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppBrand.paper,
+      canvasColor: AppBrand.paper,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: AppBrand.ink,
@@ -24,23 +28,36 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: const Color(0xFFFFFCF8),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           borderSide: BorderSide(color: AppBrand.paperStrong),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: AppBrand.paperStrong),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           borderSide: BorderSide(color: scheme.primary, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 18,
         ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        selectedColor: AppBrand.paperStrong,
+        side: const BorderSide(color: Color(0xFFE0DBD2)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        labelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
@@ -50,8 +67,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE7E2D8),
+        space: 24,
+      ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         indicatorColor: AppBrand.paperStrong,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
@@ -68,6 +89,24 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppBrand.ink,
+          side: const BorderSide(color: Color(0xFFD8D2C9)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppBrand.ink,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
