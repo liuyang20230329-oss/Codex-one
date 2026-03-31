@@ -14,12 +14,14 @@ import '../config/app_environment.dart';
 import '../network/api_client.dart';
 import '../persistence/json_preferences_store.dart';
 
+/// The runtime backend currently serving auth and chat for the app session.
 enum AuthBackend {
   firebase,
   demo,
   localApi,
 }
 
+/// Bundles repositories and user-facing status copy for app startup.
 class AppBootstrapResult {
   const AppBootstrapResult({
     required this.repository,
@@ -36,6 +38,8 @@ class AppBootstrapResult {
   final String statusMessage;
 }
 
+/// Chooses the correct repository stack for the current environment and
+/// gracefully falls back when external services are unavailable.
 class AppBootstrap {
   static Future<AppBootstrapResult> initialize() async {
     final store = await JsonPreferencesStore.create();
@@ -72,8 +76,7 @@ class AppBootstrap {
           chatRepository: DemoChatRepository(store: store),
           backend: AuthBackend.demo,
           statusLabel: '演示模式',
-          statusMessage:
-              '当前使用内置演示数据，可完整体验登录注册、认证流程、聊天与资料编辑。',
+          statusMessage: '当前使用内置演示数据，可完整体验登录注册、认证流程、聊天与资料编辑。',
         );
     }
   }
@@ -105,8 +108,7 @@ class AppBootstrap {
         chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.firebase,
         statusLabel: '${AppBrand.appName} Firebase Legacy',
-        statusMessage:
-            '当前已启用 Firebase 兼容模式。为兼容手机号主链，系统会用合成邮箱承载旧版会话。',
+        statusMessage: '当前已启用 Firebase 兼容模式。为兼容手机号主链，系统会用合成邮箱承载旧版会话。',
       );
     } catch (_) {
       return AppBootstrapResult(
@@ -114,8 +116,7 @@ class AppBootstrap {
         chatRepository: DemoChatRepository(store: store),
         backend: AuthBackend.demo,
         statusLabel: 'Firebase 初始化失败，已回退演示模式',
-        statusMessage:
-            'Firebase 初始化未成功，应用已自动切回演示模式，避免影响当前功能体验。',
+        statusMessage: 'Firebase 初始化未成功，应用已自动切回演示模式，避免影响当前功能体验。',
       );
     }
   }

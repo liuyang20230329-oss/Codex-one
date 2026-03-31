@@ -9,6 +9,8 @@ import '../domain/chat_message.dart';
 import '../domain/chat_message_type.dart';
 import '../domain/chat_repository.dart';
 
+/// Keeps inbox state, selected conversation state, and per-thread drafts in
+/// sync with the active repository.
 class ChatController extends ChangeNotifier {
   ChatController({
     required ChatRepository repository,
@@ -56,6 +58,8 @@ class ChatController extends ChangeNotifier {
   }
 
   Future<void> syncUser(AppUser user) async {
+    // Switching users resets the selected conversation and rebinds the
+    // realtime subscription so message events do not leak across accounts.
     final previousUser = _currentUser;
     final needsReset = previousUser?.id != user.id;
     final selectedConversationId = _selectedConversationId;
@@ -287,6 +291,8 @@ class ChatController extends ChangeNotifier {
     if (user == null) {
       return;
     }
+    // Realtime events only carry a signal, so the controller reloads the
+    // active lists from the repository to keep sorting and unread counts exact.
     _conversations = await _repository.loadConversations(user: user);
     final conversationId = _selectedConversationId;
     if (conversationId != null) {

@@ -8,12 +8,15 @@ import '../domain/phone_verification_session.dart';
 import '../domain/social_login_provider.dart';
 import '../domain/user_gender.dart';
 
+/// High-level auth state exposed to the app shell.
 enum AuthStatus {
   unauthenticated,
   authenticating,
   authenticated,
 }
 
+/// Coordinates sign-in, sign-up, profile updates, and the multi-step account
+/// verification flow for the UI layer.
 class AuthController extends ChangeNotifier {
   AuthController({
     required AuthRepository repository,
@@ -154,6 +157,8 @@ class AuthController extends ChangeNotifier {
   Future<PhoneVerificationSession?> requestPhoneVerification({
     required String phoneNumber,
   }) async {
+    // The verification session is cached locally so the confirmation sheet can
+    // continue without re-requesting a new code.
     return _runAuxiliaryMutation(
       action: () => _repository.requestPhoneVerification(
         phoneNumber: phoneNumber,
@@ -249,6 +254,8 @@ class AuthController extends ChangeNotifier {
     required Future<AppUser> Function() action,
     required void Function(AppUser user) onSuccess,
   }) async {
+    // Mutations share one state transition path so loading/error rendering
+    // stays consistent across profile edits and verification actions.
     _status = AuthStatus.authenticating;
     _errorMessage = null;
     notifyListeners();
