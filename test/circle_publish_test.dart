@@ -59,9 +59,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('tab-circle')).hitTestable(),
-      );
+      await tester.tap(find.byIcon(Icons.bubble_chart_outlined).hitTestable());
       await tester.pumpAndSettle();
 
       await tester.tap(

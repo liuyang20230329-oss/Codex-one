@@ -196,79 +196,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
                 destinations: <Widget>[
-                  NavigationDestination(
-                    icon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-square'),
-                      kind: _TabAnimalKind.fox,
-                      palette: palette,
-                    ),
-                    selectedIcon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-square-selected'),
-                      kind: _TabAnimalKind.fox,
-                      palette: palette,
-                      selected: true,
-                    ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.explore_outlined),
+                    selectedIcon: Icon(Icons.explore),
                     label: '广场',
                   ),
-                  NavigationDestination(
-                    icon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-circle'),
-                      kind: _TabAnimalKind.bunny,
-                      palette: palette,
-                    ),
-                    selectedIcon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-circle-selected'),
-                      kind: _TabAnimalKind.bunny,
-                      palette: palette,
-                      selected: true,
-                    ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.bubble_chart_outlined),
+                    selectedIcon: Icon(Icons.bubble_chart),
                     label: '圈子',
                   ),
                   NavigationDestination(
                     icon: unreadCount > 0
                         ? Badge.count(
                             count: unreadCount,
-                            child: _AnimalTabIcon(
-                              key: const ValueKey<String>('tab-chat'),
-                              kind: _TabAnimalKind.cat,
-                              palette: palette,
-                            ),
+                            child: const Icon(Icons.chat_bubble_outline),
                           )
-                        : _AnimalTabIcon(
-                            key: const ValueKey<String>('tab-chat'),
-                            kind: _TabAnimalKind.cat,
-                            palette: palette,
-                          ),
+                        : const Icon(Icons.chat_bubble_outline),
                     selectedIcon: unreadCount > 0
                         ? Badge.count(
                             count: unreadCount,
-                            child: _AnimalTabIcon(
-                              key: const ValueKey<String>('tab-chat-selected'),
-                              kind: _TabAnimalKind.cat,
-                              palette: palette,
-                              selected: true,
-                            ),
+                            child: const Icon(Icons.chat_bubble),
                           )
-                        : _AnimalTabIcon(
-                            key: const ValueKey<String>('tab-chat-selected'),
-                            kind: _TabAnimalKind.cat,
-                            palette: palette,
-                            selected: true,
-                          ),
+                        : const Icon(Icons.chat_bubble),
                     label: '消息',
                   ),
-                  NavigationDestination(
-                    icon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-account'),
-                      kind: _TabAnimalKind.bear,
-                      palette: palette,
-                    ),
-                    selectedIcon: _AnimalTabIcon(
-                      key: const ValueKey<String>('tab-account-selected'),
-                      kind: _TabAnimalKind.bear,
-                      palette: palette,
-                      selected: true,
-                    ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
                     label: '我的',
                   ),
                 ],
@@ -442,306 +397,6 @@ class _HeaderPill extends StatelessWidget {
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: Colors.white,
             ),
-      ),
-    );
-  }
-}
-
-enum _TabAnimalKind {
-  fox,
-  bunny,
-  cat,
-  bear,
-}
-
-/// A small hand-built cartoon animal icon used in the bottom navigation so the
-/// shell feels warmer than the stock Material icons.
-class _AnimalTabIcon extends StatelessWidget {
-  const _AnimalTabIcon({
-    super.key,
-    required this.kind,
-    required this.palette,
-    this.selected = false,
-  });
-
-  final _TabAnimalKind kind;
-  final UserTonePalette palette;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final shellColor = selected ? palette.primary : palette.cardBackground;
-    final faceColor = _faceColorFor(kind);
-    final earInnerColor = _earInnerColorFor(kind);
-    final whiskersVisible = kind == _TabAnimalKind.cat;
-
-    return SizedBox(
-      width: 34,
-      height: 30,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned(
-            top: 1,
-            left: 4,
-            child: _AnimalEar(
-              selected: selected,
-              shellColor: shellColor,
-              innerColor: earInnerColor,
-              flip: false,
-            ),
-          ),
-          Positioned(
-            top: 1,
-            right: 4,
-            child: _AnimalEar(
-              selected: selected,
-              shellColor: shellColor,
-              innerColor: earInnerColor,
-              flip: true,
-            ),
-          ),
-          Positioned(
-            top: 6,
-            child: Container(
-              width: 28,
-              height: 22,
-              decoration: BoxDecoration(
-                color: shellColor,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: selected ? palette.primary : palette.outline,
-                ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: <Widget>[
-                  Positioned(
-                    top: 4,
-                    child: Container(
-                      width: 18,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: faceColor,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 8,
-                    child: _AnimalEye(selected: selected),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 8,
-                    child: _AnimalEye(selected: selected),
-                  ),
-                  Positioned(
-                    top: 14,
-                    child: Container(
-                      width: 6,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : AppBrand.ink.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 17,
-                    child: Container(
-                      width: 9,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.75)
-                            : AppBrand.ink.withValues(alpha: 0.68),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  if (whiskersVisible) ...<Widget>[
-                    Positioned(
-                      top: 16,
-                      left: 1,
-                      child: _WhiskerSet(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.52)
-                            : palette.mutedForeground,
-                        flip: false,
-                      ),
-                    ),
-                    Positioned(
-                      top: 16,
-                      right: 1,
-                      child: _WhiskerSet(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.52)
-                            : palette.mutedForeground,
-                        flip: true,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          if (selected)
-            Positioned(
-              top: -1,
-              right: -1,
-              child: Icon(
-                Icons.auto_awesome_rounded,
-                size: 12,
-                color: palette.badge,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Color _faceColorFor(_TabAnimalKind kind) {
-    switch (kind) {
-      case _TabAnimalKind.fox:
-        return const Color(0xFFF6B36A);
-      case _TabAnimalKind.bunny:
-        return const Color(0xFFFFEFF5);
-      case _TabAnimalKind.cat:
-        return const Color(0xFFD9E1F5);
-      case _TabAnimalKind.bear:
-        return const Color(0xFFE4C19B);
-    }
-  }
-
-  Color _earInnerColorFor(_TabAnimalKind kind) {
-    switch (kind) {
-      case _TabAnimalKind.fox:
-        return const Color(0xFFFFE2C4);
-      case _TabAnimalKind.bunny:
-        return const Color(0xFFFFCFE0);
-      case _TabAnimalKind.cat:
-        return const Color(0xFFF5C6D4);
-      case _TabAnimalKind.bear:
-        return const Color(0xFFF6DDC7);
-    }
-  }
-}
-
-class _AnimalEar extends StatelessWidget {
-  const _AnimalEar({
-    required this.selected,
-    required this.shellColor,
-    required this.innerColor,
-    required this.flip,
-  });
-
-  final bool selected;
-  final Color shellColor;
-  final Color innerColor;
-  final bool flip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: flip ? 0.35 : -0.35,
-      child: Container(
-        width: 11,
-        height: 11,
-        decoration: BoxDecoration(
-          color: shellColor,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Center(
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: selected ? innerColor.withValues(alpha: 0.92) : innerColor,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AnimalEye extends StatelessWidget {
-  const _AnimalEye({
-    required this.selected,
-  });
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 3,
-      height: 4,
-      decoration: BoxDecoration(
-        color: selected
-            ? Colors.white.withValues(alpha: 0.92)
-            : const Color(0xFF23262D),
-        borderRadius: BorderRadius.circular(999),
-      ),
-    );
-  }
-}
-
-class _WhiskerSet extends StatelessWidget {
-  const _WhiskerSet({
-    required this.color,
-    required this.flip,
-  });
-
-  final Color color;
-  final bool flip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.rotationY(flip ? 3.14159 : 0),
-      child: Column(
-        children: <Widget>[
-          _WhiskerLine(color: color, width: 5),
-          const SizedBox(height: 1),
-          _WhiskerLine(color: color, width: 6),
-        ],
-      ),
-    );
-  }
-}
-
-class _WhiskerLine extends StatelessWidget {
-  const _WhiskerLine({
-    required this.color,
-    required this.width,
-  });
-
-  final Color color;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: 1.4,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(999),
       ),
     );
   }
