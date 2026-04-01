@@ -1,0 +1,159 @@
+<view class="page-shell page-shell-tabbed">
+  <block wx:if="{{isGuestMode}}">
+    <view class="hero-card parent-hero fade-up">
+      <text class="tag">家长视角</text>
+      <view class="parent-title">登录后，把陪伴变成更轻松的日常节奏</view>
+      <view class="parent-text">
+        先让孩子喜欢上听和读，登录后你就能在这里看到收藏、记录和更适合的下一步建议。
+      </view>
+      <view class="metric-row">
+        <view class="metric-box">
+          <text class="metric-value">收藏</text>
+          <text class="metric-label">喜欢的内容</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-value">记录</text>
+          <text class="metric-label">最近学习轨迹</text>
+        </view>
+        <view class="metric-box">
+          <text class="metric-value">建议</text>
+          <text class="metric-label">陪伴节奏推荐</text>
+        </view>
+      </view>
+      <view class="action-primary guest-cta" bindtap="openLoginSheet">登录进入家长中心</view>
+    </view>
+
+    <view class="surface-card guest-panel fade-up">
+      <view class="guest-panel-title">登录后你会得到</view>
+      <view class="tip-item">
+        <text class="goal-dot"></text>
+        <text class="tip-text">统一保存喜欢的课程，不用每次重新找</text>
+      </view>
+      <view class="tip-item">
+        <text class="goal-dot"></text>
+        <text class="tip-text">知道孩子最近偏爱哪一类内容、什么时候更专注</text>
+      </view>
+      <view class="tip-item">
+        <text class="goal-dot"></text>
+        <text class="tip-text">后续还能接入成长数据和更细的陪伴建议</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="hero-card parent-hero fade-up">
+      <text class="tag">家长视角</text>
+      <view class="parent-title">让陪伴更轻松，不必把小程序做成第二课堂</view>
+      <view class="parent-text">
+        这里先展示家长最关心的 3 类信息：孩子最近喜欢什么、什么时候状态最好、下一步还缺什么。
+      </view>
+    </view>
+
+    <view class="surface-card account-card fade-up">
+      <view class="account-top">
+        <view>
+          <view class="account-name">{{userProfile.nickname || '学习家长'}}</view>
+          <view class="account-note">当前已登录，收藏、成长记录和后续学习数据都会跟随这个账号。</view>
+        </view>
+        <view class="action-secondary" bindtap="handleLogout">退出登录</view>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <view>
+        <view class="section-title">本周观察</view>
+        <view class="section-caption">先给出高层结论，避免家长一上来看到太多复杂数据。</view>
+      </view>
+    </view>
+
+    <view class="list-block">
+      <view
+        wx:for="{{observations}}"
+        wx:key="title"
+        class="surface-card parent-summary fade-up"
+      >
+        <view class="parent-summary-top">
+          <view class="parent-summary-title">{{item.title}}</view>
+          <view class="soft-chip">{{item.value}}</view>
+        </view>
+        <view class="parent-summary-note">{{item.note}}</view>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <view>
+        <view class="section-title">建议节奏</view>
+        <view class="section-caption">把使用场景拆成晨间和睡前，父母更容易照着用。</view>
+      </view>
+    </view>
+
+    <view class="list-block">
+      <view
+        wx:for="{{schedules}}"
+        wx:key="name"
+        class="hero-card schedule-card fade-up"
+      >
+        <view class="schedule-top">
+          <view class="schedule-name">{{item.name}}</view>
+          <view class="soft-chip">{{item.theme}}</view>
+        </view>
+        <view class="schedule-item" wx:for="{{item.items}}" wx:key="*this">
+          <text class="goal-dot"></text>
+          <text class="schedule-item-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <view>
+        <view class="section-title">家长提醒</view>
+        <view class="section-caption">首版先做成清晰建议，后续再接个性化设置。</view>
+      </view>
+    </view>
+
+    <view class="surface-card fade-up">
+      <view class="todo-row">
+        <view class="todo-label">温和提醒模式</view>
+        <view class="{{quietModeEnabled ? 'action-primary' : 'action-secondary'}}" bindtap="toggleQuietMode">
+          {{quietModeEnabled ? '已开启' : '已关闭'}}
+        </view>
+      </view>
+      <view class="tip-item" wx:for="{{tips}}" wx:key="*this">
+        <text class="goal-dot"></text>
+        <text class="tip-text">{{item}}</text>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <view>
+        <view class="section-title">当前待办</view>
+        <view class="section-caption">这些就是你接下来最值得优先推进的几件事。</view>
+      </view>
+    </view>
+
+    <view class="surface-card fade-up">
+      <view class="todo-row" wx:for="{{todo}}" wx:key="*this">
+        <view class="todo-text">{{index + 1}}. {{item}}</view>
+      </view>
+    </view>
+
+    <view class="hero-card parent-action fade-up">
+      <view class="parent-action-title">去看看完整内容分类</view>
+      <view class="parent-action-text">
+        如果你想先确认孩子适合从哪一类内容开始，可以先去分类页看一遍。
+      </view>
+      <view class="action-primary" bindtap="openDiscover">打开分类页</view>
+    </view>
+  </block>
+
+  <login-sheet
+    visible="{{showLoginSheet}}"
+    title="{{loginSheet.title}}"
+    body="{{loginSheet.body}}"
+    primaryText="{{loginSheet.primaryText}}"
+    secondaryText="{{loginSheet.secondaryText}}"
+    bind:confirm="handleLoginConfirm"
+    bind:cancel="closeLoginSheet"
+    bind:close="closeLoginSheet"
+  />
+</view>

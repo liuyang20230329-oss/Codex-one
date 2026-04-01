@@ -1,0 +1,124 @@
+<view class="page-shell page-shell-tabbed">
+  <view
+    class="custom-nav-shell"
+    style="padding-top: {{statusBarHeight}}px;"
+  >
+    <view class="custom-nav-panel" style="min-height: {{navPanelHeight}}px;">
+      <view class="custom-nav-inner" style="height: {{navContentHeight}}px;">
+        <view class="custom-nav-side" style="width: {{capsuleReserve}}px;"></view>
+        <view class="custom-nav-title">LYC 首页</view>
+        <view class="custom-nav-side" style="width: {{capsuleReserve}}px;"></view>
+      </view>
+    </view>
+  </view>
+  <view class="custom-nav-spacer" style="height: {{navSpacerHeight}}px;"></view>
+
+  <view class="hero-card hero-home fade-up">
+    <view class="hero-glow hero-glow-left float-slow"></view>
+    <view class="hero-glow hero-glow-right"></view>
+    <text class="tag">小宇宙学堂</text>
+    <view class="hero-title">今天想去哪里冒险？</view>
+    <view class="hero-subtitle">
+      从英语跟读到唐诗故事，把今天的 10 分钟变成有声音、有画面的学习旅程。
+    </view>
+    <view class="metric-row">
+      <view class="metric-box">
+        <text class="metric-value">{{totalStars}}</text>
+        <text class="metric-label">成长星星</text>
+      </view>
+      <view class="metric-box">
+        <text class="metric-value">{{streakDays}}</text>
+        <text class="metric-label">连续学习</text>
+      </view>
+      <view class="metric-box">
+        <text class="metric-value">4</text>
+        <text class="metric-label">今日入口</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">继续上次学习</view>
+      <view class="section-caption">先接着上一次的节奏，孩子会更容易进入状态。</view>
+    </view>
+  </view>
+
+  <view class="surface-card continue-card fade-up" bindtap="openContinue">
+    <view class="continue-top">
+      <view>
+        <view class="continue-label">上次听到这里</view>
+        <view class="continue-title">{{continueLesson.title}}</view>
+      </view>
+      <view class="soft-chip">{{continueLesson.duration}}</view>
+    </view>
+    <view class="continue-summary">{{continueLesson.summary}}</view>
+    <view class="continue-bottom">
+      <view class="continue-meta">
+        <text class="soft-chip">{{continueLesson.ageRange}}</text>
+        <text class="soft-chip">{{continueLesson.difficulty}}</text>
+      </view>
+      <view class="action-primary">继续学习</view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">四个冒险入口</view>
+      <view class="section-caption">孩子先从喜欢的内容开始，学习体验会更轻松。</view>
+    </view>
+    <view class="section-link" bindtap="goDiscover">查看全部</view>
+  </view>
+
+  <view class="portal-grid">
+    <portal-card
+      wx:for="{{categories}}"
+      wx:key="id"
+      item="{{item}}"
+      style="width: 48%; margin-bottom: 20rpx;"
+      bind:select="openCategory"
+    />
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">今日推荐</view>
+      <view class="section-caption">首版先给孩子安排一条节奏舒服的学习路线。</view>
+    </view>
+    <view class="section-link" bindtap="goGrowth">看成长</view>
+  </view>
+
+  <view class="list-block">
+    <lesson-card
+      wx:for="{{todayLessons}}"
+      wx:key="id"
+      item="{{item}}"
+      bind:select="openLesson"
+    />
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">睡前轻听</view>
+      <view class="section-caption">适合晚上放慢节奏，选一首诗或一个故事陪伴入睡前时光。</view>
+    </view>
+  </view>
+
+  <view class="hero-card bedtime-card fade-up">
+    <view class="bedtime-copy">
+      <view class="bedtime-title">月光、小故事和轻轻的朗读</view>
+      <view class="bedtime-text">
+        睡前内容更适合“先听后说”，让孩子在放松状态下接受语言和知识。
+      </view>
+    </view>
+    <view class="list-block bedtime-list">
+      <lesson-card
+        wx:for="{{bedtimeLessons}}"
+        wx:key="id"
+        item="{{item}}"
+        mode="compact"
+        bind:select="openLesson"
+      />
+    </view>
+  </view>
+</view>

@@ -1,0 +1,79 @@
+.lesson-card {
+  display: flex;
+  align-items: stretch;
+  padding: 24rpx;
+  border-radius: 30rpx;
+  background: #ffffff;
+  box-shadow: 0 14rpx 30rpx rgba(47, 58, 74, 0.08);
+}
+
+.lesson-card + .lesson-card {
+  margin-top: 20rpx;
+}
+
+.lesson-cover {
+  width: 156rpx;
+  min-height: 170rpx;
+  margin-right: 22rpx;
+  padding: 20rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #a7dcff 0%, #84c4ff 100%);
+  display: flex;
+  align-items: flex-end;
+}
+
+.lesson-default .lesson-cover {
+  background: linear-gradient(180deg, #a7dcff 0%, #84c4ff 100%);
+}
+
+.lesson-compact .lesson-cover {
+  background: linear-gradient(180deg, #ffd7a6 0%, #ffb36b 100%);
+}
+
+.lesson-cover-label {
+  font-size: 24rpx;
+  line-height: 1.4;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.lesson-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2f3a4a;
+}
+
+.lesson-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #64758a;
+}
+
+.lesson-summary {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #4f5f73;
+}
+
+.lesson-meta {
+  margin-top: auto;
+  padding-top: 18rpx;
+}
+
+.lesson-chip {
+  display: inline-flex;
+  margin-right: 12rpx;
+  margin-top: 10rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #4f5f73;
+  background: #f6f8fc;
+}

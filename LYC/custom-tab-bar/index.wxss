@@ -1,0 +1,50 @@
+.tabbar-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  padding: 0 22rpx calc(env(safe-area-inset-bottom) + 18rpx);
+  background: transparent;
+}
+
+.tabbar-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 134rpx;
+  padding: 12rpx 18rpx 10rpx;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 999rpx;
+  box-shadow: 0 18rpx 36rpx rgba(47, 58, 74, 0.12);
+}
+
+.tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 4rpx;
+}
+
+.tabbar-icon {
+  width: 64rpx;
+  height: 64rpx;
+}
+
+.tabbar-label {
+  margin-top: 2rpx;
+  font-family: "Hannotate SC", "HanziPen SC", "Marker Felt", "Microsoft YaHei UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 24rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+  line-height: 1.1;
+  color: #7b8798;
+  transform: translateY(-2rpx);
+}
+
+.tabbar-label-active {
+  font-weight: 900;
+  color: #ff8f62;
+}

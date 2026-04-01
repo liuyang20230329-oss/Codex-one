@@ -1,0 +1,85 @@
+.sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 20rpx calc(env(safe-area-inset-bottom) + 168rpx);
+}
+
+.sheet-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(47, 58, 74, 0.36);
+  backdrop-filter: blur(6rpx);
+}
+
+.sheet-panel {
+  position: relative;
+  width: 100%;
+  padding: 24rpx 24rpx 28rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(180deg, #fffdf9 0%, #fff6ea 100%);
+  box-shadow: 0 22rpx 40rpx rgba(47, 58, 74, 0.18);
+  z-index: 1;
+}
+
+.sheet-handle {
+  width: 96rpx;
+  height: 8rpx;
+  margin: 0 auto 22rpx;
+  border-radius: 999rpx;
+  background: rgba(99, 114, 134, 0.22);
+}
+
+.sheet-title {
+  font-size: 36rpx;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: #2f3a4a;
+  text-align: center;
+}
+
+.sheet-body {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #5a6a7e;
+  text-align: center;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 18rpx;
+  margin-top: 26rpx;
+}
+
+.sheet-primary,
+.sheet-secondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84rpx;
+  padding: 0 22rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.sheet-primary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffaf66 0%, #ff8f62 100%);
+  box-shadow: 0 16rpx 24rpx rgba(255, 143, 98, 0.28);
+}
+
+.sheet-secondary {
+  color: #4d5c70;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+@media (max-height: 700px) {
+  .sheet-root {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 148rpx);
+  }
+}

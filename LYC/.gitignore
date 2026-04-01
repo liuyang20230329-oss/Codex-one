@@ -1,0 +1,8 @@
+MP3/
+media/
+preview-*.jpg
+preview-*.png
+preview-info.json
+preview-debug.log
+project.private.config.json
+*.log

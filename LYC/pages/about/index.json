@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "家长中心",
+  "usingComponents": {
+    "login-sheet": "/components/login-sheet/index"
+  }
+}

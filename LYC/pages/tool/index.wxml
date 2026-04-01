@@ -1,0 +1,171 @@
+<view class="page-shell" wx:if="{{lesson}}">
+  <view class="hero-card detail-hero fade-up">
+    <text class="tag">{{category.name}}</text>
+    <view class="detail-title">{{lesson.title}}</view>
+    <view class="detail-subtitle">{{lesson.subtitle}}</view>
+    <view class="detail-summary">{{lesson.summary}}</view>
+    <view class="detail-meta">
+      <text class="soft-chip">{{lesson.duration}}</text>
+      <text class="soft-chip">{{lesson.ageRange}}</text>
+      <text class="soft-chip">{{lesson.difficulty}}</text>
+    </view>
+  </view>
+
+  <view class="trial-banner fade-up" wx:if="{{showTrialBanner}}">
+    <view class="trial-banner-text">
+      {{isTrialMode ? '正在试听中，登录后可完整收听' : '当前为试听内容，登录后可完整收听'}}
+    </view>
+    <view class="trial-banner-meta">
+      今日试听 {{trialCount}} / {{trialMaxCount}}，单次最多 {{trialMaxSeconds}} 秒
+    </view>
+  </view>
+
+  <view class="surface-card action-panel fade-up">
+    <view class="action-row">
+      <view class="action-primary" bindtap="togglePlay">
+        {{isPlaying ? '暂停播放' : playButtonText}}
+      </view>
+      <view class="action-secondary" bindtap="toggleFollowRead">
+        {{isFollowReading ? '关闭跟读' : '开启跟读'}}
+      </view>
+    </view>
+    <view class="action-row action-row-bottom">
+      <view class="soft-chip">导师：{{lesson.mentor}}</view>
+      <view class="soft-chip" bindtap="toggleCollect">
+        {{isCollected ? '已收藏' : '加入收藏'}}
+      </view>
+    </view>
+    <view class="action-note" wx:if="{{isGuestMode}}">
+      登录后可完整收听、收藏内容，并自动保存学习记录。
+    </view>
+  </view>
+
+  <view wx:if="{{lesson.sourcePath || lesson.audioUrl}}">
+    <view class="section-head">
+      <view>
+        <view class="section-title">素材信息</view>
+        <view class="section-caption">这里展示当前内容实际使用的音频来源，方便排查播放问题。</view>
+      </view>
+    </view>
+
+    <view class="surface-card fade-up">
+      <view class="source-row">
+        <text class="source-label">文件名</text>
+        <text class="source-value">{{lesson.fileName || '演示内容'}}</text>
+      </view>
+      <view class="source-row" wx:if="{{lesson.audioUrl}}">
+        <text class="source-label">播放地址</text>
+        <text class="source-value">{{lesson.audioUrl}}</text>
+      </view>
+      <view class="source-row" wx:if="{{lesson.sourcePath}}">
+        <text class="source-label">本地路径</text>
+        <text class="source-value">{{lesson.sourcePath}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">播放器状态</view>
+      <view class="section-caption">这里会显示播放器是否启动成功，以及当前卡在哪一步。</view>
+    </view>
+  </view>
+
+  <view class="surface-card fade-up">
+    <view class="source-row">
+      <text class="source-label">当前状态</text>
+      <text class="source-value">{{audioDebug.status}}</text>
+    </view>
+    <view class="source-row">
+      <text class="source-label">说明</text>
+      <text class="source-value">
+        当前状态会告诉你播放器正在下载、缓冲还是已经开始播放，方便我们定位真机问题。
+      </text>
+    </view>
+    <view class="source-row">
+      <text class="source-label">最近事件</text>
+      <text class="source-value">{{audioDebug.lastEvent || '暂无'}}</text>
+    </view>
+    <view class="source-row">
+      <text class="source-label">播放进度</text>
+      <text class="source-value">{{audioDebug.currentTime}}</text>
+    </view>
+    <view class="source-row" wx:if="{{audioDebug.source}}">
+      <text class="source-label">当前音频源</text>
+      <text class="source-value">{{audioDebug.source}}</text>
+    </view>
+    <view class="source-row" wx:if="{{audioDebug.lastError}}">
+      <text class="source-label">最近错误</text>
+      <text class="source-value source-error">{{audioDebug.lastError}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">这节课会学到</view>
+      <view class="section-caption">把目标讲得更清楚，家长和小朋友都会更安心。</view>
+    </view>
+  </view>
+
+  <view class="surface-card fade-up">
+    <view class="goal-item" wx:for="{{lesson.focusPoints}}" wx:key="*this">
+      <text class="goal-dot"></text>
+      <text class="goal-text">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">分段学习</view>
+      <view class="section-caption">先听一句，再慢慢跟读，小朋友更容易建立节奏感。</view>
+    </view>
+  </view>
+
+  <view
+    wx:for="{{lesson.segments}}"
+    wx:key="cue"
+    class="surface-card segment-card {{activeSegmentIndex === index ? 'segment-card-active' : ''}} fade-up"
+    data-index="{{index}}"
+    bindtap="handleSegmentTap"
+  >
+    <view class="segment-cue">{{item.cue}}</view>
+    <view class="segment-text">{{item.text}}</view>
+    <view class="segment-translation">{{item.translation}}</view>
+    <view class="segment-tip">{{item.tip}}</view>
+  </view>
+
+  <view class="hero-card reward-card fade-up">
+    <view class="reward-title">完成本节可获得 {{lesson.reward}} 颗成长星星</view>
+    <view class="reward-text">
+      这一版先用演示星星激励，后面接入云开发后就能保存真实学习记录。
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <view class="section-title">同类推荐</view>
+      <view class="section-caption">保持同一类内容连续学习，体验会更流畅。</view>
+    </view>
+  </view>
+
+  <view class="list-block">
+    <lesson-card
+      wx:for="{{recommendationList}}"
+      wx:key="id"
+      item="{{item}}"
+      mode="compact"
+      bind:select="openRecommendation"
+    />
+  </view>
+
+  <login-sheet
+    visible="{{showLoginSheet}}"
+    title="{{loginSheet.title}}"
+    body="{{loginSheet.body}}"
+    primaryText="{{loginSheet.primaryText}}"
+    secondaryText="{{loginSheet.secondaryText}}"
+    bind:confirm="handleLoginConfirm"
+    bind:cancel="closeLoginSheet"
+    bind:close="closeLoginSheet"
+  />
+</view>

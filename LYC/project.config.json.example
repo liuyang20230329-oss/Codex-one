@@ -1,0 +1,18 @@
+{
+  "appid": "wx664aa56827e6ab53",
+  "projectname": "LYC",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "simulatorType": "wechat",
+  "simulatorPluginLibVersion": {},
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "condition": false,
+    "packNpmManually": false,
+    "ignoreUploadUnusedFiles": true
+  }
+}

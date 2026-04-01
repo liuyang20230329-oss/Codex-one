@@ -1,0 +1,12 @@
+<view wx:if="{{visible}}" class="sheet-root">
+  <view class="sheet-mask" bindtap="handleMaskTap"></view>
+  <view class="sheet-panel">
+    <view class="sheet-handle"></view>
+    <view class="sheet-title">{{title}}</view>
+    <view class="sheet-body">{{body}}</view>
+    <view class="sheet-actions">
+      <view class="sheet-primary" bindtap="handleConfirm">{{primaryText}}</view>
+      <view class="sheet-secondary" bindtap="handleCancel">{{secondaryText}}</view>
+    </view>
+  </view>
+</view>
