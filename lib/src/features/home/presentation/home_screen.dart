@@ -9,6 +9,8 @@ import '../../auth/domain/user_gender.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../chat/presentation/chat_controller.dart';
 import '../../chat/presentation/chat_screen.dart';
+import '../../circle/domain/circle_post.dart';
+import '../../circle/presentation/circle_controller.dart';
 
 /// Hosts the four main modules and keeps the page shell synchronized with the
 /// latest user and chat state.
@@ -17,6 +19,7 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.chatController,
+    required this.circleController,
     required this.user,
     required this.statusLabel,
     required this.statusMessage,
@@ -24,6 +27,7 @@ class HomeScreen extends StatefulWidget {
 
   final AuthController controller;
   final ChatController chatController;
+  final CircleController circleController;
   final AppUser user;
   final String statusLabel;
   final String statusMessage;
@@ -57,9 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Chat data depends on the current user profile, so it is refreshed when
-    // the shell first mounts.
+    // Chat and circle data both depend on the current profile and
+    // verification state, so the shell refreshes them together.
     widget.chatController.syncUser(widget.user);
+    widget.circleController.syncUser(widget.user);
   }
 
   @override
@@ -67,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.didUpdateWidget(oldWidget);
     if (_didUserContextChange(oldWidget.user, widget.user)) {
       widget.chatController.syncUser(widget.user);
+      widget.circleController.syncUser(widget.user);
     }
   }
 
@@ -94,7 +100,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge(
-        <Listenable>[widget.controller, widget.chatController],
+        <Listenable>[
+          widget.controller,
+          widget.chatController,
+          widget.circleController,
+        ],
       ),
       builder: (context, _) {
         final user = widget.controller.currentUser ?? widget.user;
@@ -106,7 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
             statusLabel: widget.statusLabel,
             statusMessage: widget.statusMessage,
           ),
-          CircleTab(user: user),
+          CircleTab(
+            controller: widget.circleController,
+            user: user,
+          ),
           ChatScreen(
             controller: widget.chatController,
             user: user,
@@ -760,9 +773,11 @@ class _PlazaTabState extends State<PlazaTab> {
 class CircleTab extends StatefulWidget {
   const CircleTab({
     super.key,
+    required this.controller,
     required this.user,
   });
 
+  final CircleController controller;
   final AppUser user;
 
   @override
@@ -771,45 +786,6 @@ class CircleTab extends StatefulWidget {
 
 class _CircleTabState extends State<CircleTab> {
   _CirclePostDraft? _draftCache;
-
-  late final List<_CirclePost> _posts = <_CirclePost>[
-    const _CirclePost(
-      id: 'circle-1',
-      authorName: '小川',
-      location: '上海·徐汇',
-      content: '今晚在武康路散步，拍到了很舒服的夜景，想找人一起语音聊聊天。',
-      createdAtLabel: '5分钟前',
-      attachments: <String>['图片 3张', '语音 18秒'],
-      verificationLabel: '真人',
-      distance: '0.8km',
-      likes: 26,
-      comments: 8,
-    ),
-    const _CirclePost(
-      id: 'circle-2',
-      authorName: '林雾',
-      location: '杭州·西湖',
-      content: '刚刚录了一段晚安语音，适合睡前听，欢迎来圈子里互动。',
-      createdAtLabel: '18分钟前',
-      attachments: <String>['语音'],
-      verificationLabel: '实名',
-      distance: '2.4km',
-      likes: 15,
-      comments: 4,
-    ),
-    const _CirclePost(
-      id: 'circle-3',
-      authorName: '桃桃',
-      location: '苏州·园区',
-      content: '刚整理好一组最近拍的城市夜色作品，想放进圈子里看看大家更喜欢哪一版。',
-      createdAtLabel: '1小时前',
-      attachments: <String>['作品 2个'],
-      verificationLabel: '真人',
-      distance: '4.1km',
-      likes: 34,
-      comments: 12,
-    ),
-  ];
 
   Future<void> _openPublishScreen() async {
     final result = await Navigator.of(context).push<_CircleComposerResult>(
@@ -844,24 +820,23 @@ class _CircleTabState extends State<CircleTab> {
       return;
     }
 
+    final post = await widget.controller.publishPost(draft.publishInput);
+    if (!mounted) {
+      return;
+    }
+    if (post == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(widget.controller.errorMessage ?? '当前无法发布动态，请稍后再试。'),
+          ),
+        );
+      return;
+    }
+
     setState(() {
       _draftCache = null;
-      _posts.insert(
-        0,
-        _CirclePost(
-          id: 'circle-${DateTime.now().microsecondsSinceEpoch}',
-          authorName: widget.user.name,
-          location: draft.locationOption.address,
-          content: draft.displayContent,
-          createdAtLabel: '刚刚',
-          attachments: draft.attachmentLabels,
-          verificationLabel:
-              widget.user.canAppearInRecommendations ? '真人' : '待认证',
-          distance: '附近',
-          likes: 0,
-          comments: 0,
-        ),
-      );
     });
 
     ScaffoldMessenger.of(context)
@@ -874,72 +849,146 @@ class _CircleTabState extends State<CircleTab> {
   @override
   Widget build(BuildContext context) {
     final palette = tonePaletteFor(widget.user.gender);
+    final posts = widget.controller.posts;
+    final isLoading = widget.controller.isLoading;
+    final isPublishing = widget.controller.isPublishing;
+    final errorMessage = widget.controller.errorMessage;
 
     return Stack(
       children: <Widget>[
-        ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 108),
-          children: <Widget>[
-            const _SectionHeadline(
-              eyebrow: '圈子动态',
-              title: '附近内容流要有氛围，也要有发布秩序',
-              description: '动态入口保留全屏发布方式，地址、图片、语音和作品都继续通过独立组件挑选。',
-            ),
-            const SizedBox(height: 18),
-            _TonePanel(
-              palette: palette,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    '发布前建议先补齐头像、签名和认证信息，这样你的动态会更容易被认真浏览。',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: _SummaryMetricCard(
-                          palette: palette,
-                          label: '附近动态',
-                          value: '${_posts.length}',
-                          hint: '已进入内容流',
+        RefreshIndicator(
+          onRefresh: widget.controller.refreshPosts,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 108),
+            children: <Widget>[
+              const _SectionHeadline(
+                eyebrow: '圈子动态',
+                title: '附近内容流要有氛围，也要有发布秩序',
+                description: '动态入口保留全屏发布方式，地址、图片、语音和作品都继续通过独立组件挑选。',
+              ),
+              const SizedBox(height: 18),
+              _TonePanel(
+                palette: palette,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '圈子列表现在会优先加载真实接口数据；发布前仍建议先补齐头像、签名和认证信息，这样动态更容易被认真浏览。',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: _SummaryMetricCard(
+                            palette: palette,
+                            label: '附近动态',
+                            value: '${posts.length}',
+                            hint: '已进入真实内容流',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _SummaryMetricCard(
-                          palette: palette,
-                          label: '可发布素材',
-                          value: '5项',
-                          hint: '文案 / 地址 / 图片 / 语音 / 作品',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _SummaryMetricCard(
+                            palette: palette,
+                            label: '可发布素材',
+                            value: '5项',
+                            hint: '文案 / 地址 / 图片 / 语音 / 作品',
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (errorMessage != null) ...<Widget>[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: palette.surface,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(Icons.wifi_tethering_error_rounded),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(errorMessage)),
+                            TextButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : widget.controller.refreshPosts,
+                              child: const Text('重试'),
+                            ),
+                          ],
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (isLoading && posts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: Column(
+                      children: <Widget>[
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('圈子列表加载中...'),
+                      ],
+                    ),
                   ),
+                )
+              else if (posts.isEmpty)
+                _TonePanel(
+                  palette: palette,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '圈子里还没有加载到可展示的内容。',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('你可以先发布第一条动态，或者下拉刷新后再试一次。'),
+                      const SizedBox(height: 14),
+                      FilledButton(
+                        onPressed: widget.controller.refreshPosts,
+                        child: const Text('重新加载'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                for (final post in posts) ...<Widget>[
+                  _CirclePostCard(
+                    post: post,
+                    palette: palette,
+                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            for (final post in _posts) ...<Widget>[
-              _CirclePostCard(
-                post: post,
-                palette: palette,
-              ),
-              const SizedBox(height: 12),
             ],
-          ],
+          ),
         ),
         Positioned(
           right: 20,
           bottom: 20,
           child: FloatingActionButton.extended(
             key: const ValueKey<String>('circle-open-publish'),
-            onPressed: _openPublishScreen,
+            onPressed: isPublishing ? null : _openPublishScreen,
             backgroundColor: palette.primary,
             foregroundColor: palette.foreground,
-            icon: const Icon(Icons.add),
-            label: const Text('发布动态'),
+            icon: isPublishing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.add),
+            label: Text(isPublishing ? '发布中...' : '发布动态'),
           ),
         ),
       ],
@@ -1228,7 +1277,7 @@ class _CirclePostCard extends StatelessWidget {
     required this.palette,
   });
 
-  final _CirclePost post;
+  final CirclePost post;
   final UserTonePalette palette;
 
   @override
@@ -1292,7 +1341,7 @@ class _CirclePostCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: post.attachments.map((attachment) {
+            children: post.attachmentLabels.map((attachment) {
               return Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -2451,32 +2500,6 @@ class _PlazaUserCardData {
   final bool isOnline;
 }
 
-class _CirclePost {
-  const _CirclePost({
-    required this.id,
-    required this.authorName,
-    required this.location,
-    required this.content,
-    required this.createdAtLabel,
-    required this.attachments,
-    required this.verificationLabel,
-    required this.distance,
-    required this.likes,
-    required this.comments,
-  });
-
-  final String id;
-  final String authorName;
-  final String location;
-  final String content;
-  final String createdAtLabel;
-  final List<String> attachments;
-  final String verificationLabel;
-  final String distance;
-  final int likes;
-  final int comments;
-}
-
 class _CircleComposerResult {
   const _CircleComposerResult._({
     this.savedDraft,
@@ -2552,6 +2575,32 @@ class _CirclePostDraft {
       );
     }
     return labels;
+  }
+
+  CirclePostInput get publishInput {
+    return CirclePostInput(
+      content: displayContent,
+      location: locationOption.address,
+      attachments: <CirclePostAttachment>[
+        if (images.isNotEmpty)
+          CirclePostAttachment(
+            label: '图片 ${images.length}张',
+            type: CircleAttachmentType.image,
+          ),
+        if (voiceNote != null)
+          CirclePostAttachment(
+            label: '语音 ${voiceNote!.durationLabel}',
+            type: CircleAttachmentType.voice,
+          ),
+        if (selectedWorks.isNotEmpty)
+          CirclePostAttachment(
+            label: selectedWorks.length == 1
+                ? '作品 ${selectedWorks.first.title}'
+                : '作品 ${selectedWorks.length}个',
+            type: CircleAttachmentType.work,
+          ),
+      ],
+    );
   }
 }
 

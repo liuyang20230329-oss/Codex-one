@@ -6,6 +6,7 @@ import 'package:codex_one/src/core/bootstrap/app_bootstrap.dart';
 import 'package:codex_one/src/core/persistence/json_preferences_store.dart';
 import 'package:codex_one/src/features/auth/data/demo_auth_repository.dart';
 import 'package:codex_one/src/features/chat/data/demo_chat_repository.dart';
+import 'package:codex_one/src/features/circle/data/demo_circle_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ void main() {
     final bootstrap = AppBootstrapResult(
       repository: await DemoAuthRepository.seeded(store: store),
       chatRepository: DemoChatRepository(store: store),
+      circleRepository: DemoCircleRepository(store: store),
       backend: AuthBackend.demo,
       statusLabel: 'Demo mode',
       statusMessage: 'Demo auth is active for tests.',
