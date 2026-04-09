@@ -864,3 +864,21 @@ ws://127.0.0.1:3001/ws/chat?token=<JWT>
 9. `/api/v1/search/*`
 10. `/api/v1/upload/*`
 11. `/api/v1/admin/*`
+
+## 16. 2026-04-09 圈子接口接入说明
+
+当前 Flutter 移动端已完成以下圈子接口接入：
+
+1. `GET /api/v1/circle/posts`
+2. `GET /api/v1/circle/posts/:postId`
+3. `POST /api/v1/circle/posts`
+4. `POST /api/v1/circle/posts/:postId/comments`
+5. `POST /api/v1/circle/posts/:postId/reports`
+
+当前移动端对这些接口的使用方式如下：
+
+1. 圈子列表页加载动态流时调用 `GET /api/v1/circle/posts`
+2. 动态详情页打开时调用 `GET /api/v1/circle/posts/:postId`
+3. 发表评论或回复评论时调用 `POST /api/v1/circle/posts/:postId/comments`
+4. 举报动态时调用 `POST /api/v1/circle/posts/:postId/reports`
+5. 评论提交成功后，移动端会重新拉取一次详情，保证评论数量与评论列表同步刷新

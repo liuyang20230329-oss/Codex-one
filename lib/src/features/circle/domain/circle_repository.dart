@@ -10,4 +10,22 @@ abstract class CircleRepository {
     required AppUser user,
     required CirclePostInput input,
   });
+
+  Future<CirclePostDetail> loadPostDetail({
+    required AppUser user,
+    required String postId,
+  });
+
+  Future<CirclePostDetail> addComment({
+    required AppUser user,
+    required String postId,
+    required String content,
+    String? parentCommentId,
+  });
+
+  Future<void> reportPost({
+    required AppUser user,
+    required String postId,
+    required String reason,
+  });
 }

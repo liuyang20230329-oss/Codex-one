@@ -2,6 +2,8 @@ enum CircleAttachmentType {
   image('image'),
   voice('voice'),
   work('work'),
+  location('location'),
+  video('video'),
   other('other');
 
   const CircleAttachmentType(this.apiName);
@@ -16,6 +18,26 @@ enum CircleAttachmentType {
     }
     return CircleAttachmentType.other;
   }
+}
+
+String _relativeTimeLabel(DateTime time) {
+  final now = DateTime.now();
+  final difference = now.difference(time);
+  if (difference.inMinutes < 1) {
+    return '刚刚';
+  }
+  if (difference.inHours < 1) {
+    return '${difference.inMinutes}分钟前';
+  }
+  if (difference.inDays < 1) {
+    return '${difference.inHours}小时前';
+  }
+  if (difference.inDays < 7) {
+    return '${difference.inDays}天前';
+  }
+  final month = time.month.toString().padLeft(2, '0');
+  final day = time.day.toString().padLeft(2, '0');
+  return '${time.year}-$month-$day';
 }
 
 /// A compact attachment descriptor used by the circle feed and publish flow.
@@ -84,6 +106,7 @@ class CirclePost {
     required this.distance,
     required this.likes,
     required this.comments,
+    this.visibility = 'public',
   });
 
   final String id;
@@ -96,29 +119,40 @@ class CirclePost {
   final String distance;
   final int likes;
   final int comments;
+  final String visibility;
 
   List<String> get attachmentLabels {
     return attachments.map((item) => item.label).toList(growable: false);
   }
 
-  String get createdAtLabel {
-    final now = DateTime.now();
-    final difference = now.difference(createdAt);
-    if (difference.inMinutes < 1) {
-      return '刚刚';
-    }
-    if (difference.inHours < 1) {
-      return '${difference.inMinutes}分钟前';
-    }
-    if (difference.inDays < 1) {
-      return '${difference.inHours}小时前';
-    }
-    if (difference.inDays < 7) {
-      return '${difference.inDays}天前';
-    }
-    final month = createdAt.month.toString().padLeft(2, '0');
-    final day = createdAt.day.toString().padLeft(2, '0');
-    return '${createdAt.year}-$month-$day';
+  String get createdAtLabel => _relativeTimeLabel(createdAt);
+
+  CirclePost copyWith({
+    String? id,
+    String? authorName,
+    String? location,
+    String? content,
+    DateTime? createdAt,
+    List<CirclePostAttachment>? attachments,
+    String? verificationLabel,
+    String? distance,
+    int? likes,
+    int? comments,
+    String? visibility,
+  }) {
+    return CirclePost(
+      id: id ?? this.id,
+      authorName: authorName ?? this.authorName,
+      location: location ?? this.location,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      attachments: attachments ?? this.attachments,
+      verificationLabel: verificationLabel ?? this.verificationLabel,
+      distance: distance ?? this.distance,
+      likes: likes ?? this.likes,
+      comments: comments ?? this.comments,
+      visibility: visibility ?? this.visibility,
+    );
   }
 
   Map<String, Object?> toJson() {
@@ -133,6 +167,7 @@ class CirclePost {
       'distance': distance,
       'likes': likes,
       'comments': comments,
+      'visibility': visibility,
     };
   }
 
@@ -146,14 +181,17 @@ class CirclePost {
           DateTime.now(),
       attachments: ((json['attachments'] as List?) ?? const <Object?>[])
           .whereType<Map>()
-          .map((item) => CirclePostAttachment.fromJson(
-                item.cast<String, Object?>(),
-              ))
+          .map(
+            (item) => CirclePostAttachment.fromJson(
+              item.cast<String, Object?>(),
+            ),
+          )
           .toList(growable: false),
       verificationLabel: json['verificationLabel'] as String? ?? '待认证',
       distance: json['distance'] as String? ?? '附近',
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       comments: (json['comments'] as num?)?.toInt() ?? 0,
+      visibility: json['visibility'] as String? ?? 'public',
     );
   }
 
@@ -196,6 +234,110 @@ class CirclePost {
       distance: json['distance'] as String? ?? '附近',
       likes: (json['likes'] as num?)?.toInt() ?? 0,
       comments: (json['comments'] as num?)?.toInt() ?? 0,
+      visibility: json['visibility'] as String? ?? 'public',
+    );
+  }
+}
+
+class CircleComment {
+  const CircleComment({
+    required this.id,
+    required this.authorName,
+    required this.content,
+    required this.createdAt,
+    this.parentCommentId,
+  });
+
+  final String id;
+  final String authorName;
+  final String content;
+  final DateTime createdAt;
+  final String? parentCommentId;
+
+  bool get isReply => parentCommentId != null && parentCommentId!.isNotEmpty;
+  String get createdAtLabel => _relativeTimeLabel(createdAt);
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'id': id,
+      'authorName': authorName,
+      'content': content,
+      'createdAt': createdAt.toIso8601String(),
+      if (parentCommentId != null) 'parentCommentId': parentCommentId,
+    };
+  }
+
+  factory CircleComment.fromJson(Map<String, Object?> json) {
+    return CircleComment(
+      id: json['id'] as String? ?? '',
+      authorName: json['authorName'] as String? ?? '匿名用户',
+      content: json['content'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      parentCommentId: json['parentCommentId'] as String?,
+    );
+  }
+
+  factory CircleComment.fromApiJson(Map<String, Object?> json) {
+    return CircleComment(
+      id: json['id'] as String? ?? '',
+      authorName: json['author_name'] as String? ??
+          json['authorName'] as String? ??
+          '匿名用户',
+      content: json['content'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      parentCommentId: json['parent_comment_id'] as String? ??
+          json['parentCommentId'] as String?,
+    );
+  }
+}
+
+class CirclePostDetail {
+  const CirclePostDetail({
+    required this.post,
+    required this.comments,
+  });
+
+  final CirclePost post;
+  final List<CircleComment> comments;
+
+  CirclePostDetail copyWith({
+    CirclePost? post,
+    List<CircleComment>? comments,
+  }) {
+    return CirclePostDetail(
+      post: post ?? this.post,
+      comments: comments ?? this.comments,
+    );
+  }
+
+  factory CirclePostDetail.fromJson(Map<String, Object?> json) {
+    return CirclePostDetail(
+      post: CirclePost.fromJson(
+        (json['post'] as Map?)?.cast<String, Object?>() ?? <String, Object?>{},
+      ),
+      comments: ((json['comments'] as List?) ?? const <Object?>[])
+          .whereType<Map>()
+          .map(
+            (item) => CircleComment.fromJson(item.cast<String, Object?>()),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  factory CirclePostDetail.fromApiJson(Map<String, Object?> json) {
+    return CirclePostDetail(
+      post: CirclePost.fromApiJson(
+        (json['post'] as Map?)?.cast<String, Object?>() ?? <String, Object?>{},
+      ),
+      comments: ((json['comments'] as List?) ?? const <Object?>[])
+          .whereType<Map>()
+          .map(
+            (item) => CircleComment.fromApiJson(item.cast<String, Object?>()),
+          )
+          .toList(growable: false),
     );
   }
 }

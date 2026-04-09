@@ -39,4 +39,44 @@ class LocalApiCircleRepository implements CircleRepository {
     }
     return CirclePost.fromApiJson(payload.cast<String, Object?>());
   }
+
+  @override
+  Future<CirclePostDetail> loadPostDetail({
+    required AppUser user,
+    required String postId,
+  }) async {
+    final response = await _client.get('/api/v1/circle/posts/$postId');
+    return CirclePostDetail.fromApiJson(response);
+  }
+
+  @override
+  Future<CirclePostDetail> addComment({
+    required AppUser user,
+    required String postId,
+    required String content,
+    String? parentCommentId,
+  }) async {
+    await _client.post(
+      '/api/v1/circle/posts/$postId/comments',
+      body: <String, Object?>{
+        'content': content,
+        if (parentCommentId != null) 'parentCommentId': parentCommentId,
+      },
+    );
+    return loadPostDetail(user: user, postId: postId);
+  }
+
+  @override
+  Future<void> reportPost({
+    required AppUser user,
+    required String postId,
+    required String reason,
+  }) async {
+    await _client.post(
+      '/api/v1/circle/posts/$postId/reports',
+      body: <String, Object?>{
+        'reason': reason,
+      },
+    );
+  }
 }

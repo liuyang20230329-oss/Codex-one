@@ -11,6 +11,7 @@ import '../../chat/presentation/chat_controller.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../../circle/domain/circle_post.dart';
 import '../../circle/presentation/circle_controller.dart';
+import '../../circle/presentation/circle_post_detail_screen.dart';
 
 /// Hosts the four main modules and keeps the page shell synchronized with the
 /// latest user and chat state.
@@ -787,6 +788,20 @@ class CircleTab extends StatefulWidget {
 class _CircleTabState extends State<CircleTab> {
   _CirclePostDraft? _draftCache;
 
+  Future<void> _openPostDetail(CirclePost post) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) {
+          return CirclePostDetailScreen(
+            controller: widget.controller,
+            user: widget.user,
+            post: post,
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _openPublishScreen() async {
     final result = await Navigator.of(context).push<_CircleComposerResult>(
       MaterialPageRoute<_CircleComposerResult>(
@@ -961,9 +976,10 @@ class _CircleTabState extends State<CircleTab> {
                 )
               else
                 for (final post in posts) ...<Widget>[
-                  _CirclePostCard(
+                  _CirclePostFeedCard(
                     post: post,
                     palette: palette,
+                    onTap: () => _openPostDetail(post),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -1271,6 +1287,7 @@ class _PlazaUserCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _CirclePostCard extends StatelessWidget {
   const _CirclePostCard({
     required this.post,
@@ -1370,6 +1387,122 @@ class _CirclePostCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CirclePostFeedCard extends StatelessWidget {
+  const _CirclePostFeedCard({
+    required this.post,
+    required this.palette,
+    required this.onTap,
+  });
+
+  final CirclePost post;
+  final UserTonePalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey<String>('circle-post-card-${post.id}'),
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: palette.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: palette.outline),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: palette.primary.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  CircleAvatar(
+                    backgroundColor: palette.surface,
+                    foregroundColor: palette.primary,
+                    child: Text(post.authorName.characters.take(1).toString()),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          post.authorName,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${post.location} 路 ${post.distance} 路 ${post.createdAtLabel}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.highlight,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(post.verificationLabel),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(post.content),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: post.attachmentLabels.map((attachment) {
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: palette.surface,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(attachment),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: <Widget>[
+                  const Icon(Icons.favorite_border, size: 18),
+                  const SizedBox(width: 6),
+                  Text('${post.likes}'),
+                  const SizedBox(width: 18),
+                  const Icon(Icons.mode_comment_outlined, size: 18),
+                  const SizedBox(width: 6),
+                  Text('${post.comments}'),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.forum_outlined, size: 18),
+                    label: const Text('详情'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

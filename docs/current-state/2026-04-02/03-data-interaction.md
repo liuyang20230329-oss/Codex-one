@@ -465,3 +465,25 @@ sequenceDiagram
 3. 后台 API、通知 API、上传 API 已经存在，但移动端未全面接入
 4. WebSocket 当前只承担“刷新信号”，不是完整消息总线
 5. 当前版本已经具备继续扩开发的稳定底座，但还没进入“所有模块全联通”的状态
+
+## 12. 2026-04-09 数据交互补充
+
+### 12.1 圈子详情链路
+
+1. 圈子列表点击卡片后，移动端会把 `postId` 传入详情页
+2. 详情页初始化时调用 `CircleController.loadPostDetail(postId)`
+3. `localApi` 模式下，请求 `GET /api/v1/circle/posts/:postId`
+4. `demo` 模式下，从本地持久化评论缓存读取 `CirclePostDetail`
+
+### 12.2 评论链路
+
+1. 用户输入评论后，移动端调用 `CircleController.addComment`
+2. 若存在 `parentCommentId`，则按回复评论处理
+3. `localApi` 模式下，请求 `POST /api/v1/circle/posts/:postId/comments`
+4. 评论成功后会重新拉取详情，并同步更新列表卡片上的评论数
+
+### 12.3 举报链路
+
+1. 用户在详情页选择举报原因后，移动端调用 `CircleController.reportPost`
+2. `localApi` 模式下，请求 `POST /api/v1/circle/posts/:postId/reports`
+3. `demo` 模式下，仅记录本地举报条目用于流程验证
