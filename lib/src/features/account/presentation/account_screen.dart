@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/user_tone_palette.dart';
 import '../../../core/widgets/app_profile_avatar.dart';
@@ -6,19 +7,15 @@ import '../../auth/domain/app_user.dart';
 import '../../auth/domain/profile_media_work.dart';
 import '../../auth/domain/user_gender.dart';
 import '../../auth/domain/verification_status.dart';
-import '../../auth/presentation/auth_controller.dart';
+import '../../auth/presentation/bloc/auth_bloc.dart';
 import '../../auth/presentation/widgets/auth_validators.dart';
 
-/// Presents the full account center, including profile editing, verification,
-/// works management, and basic settings.
 class AccountScreen extends StatefulWidget {
   const AccountScreen({
     super.key,
-    required this.controller,
     required this.user,
   });
 
-  final AuthController controller;
   final AppUser user;
 
   @override
@@ -32,10 +29,9 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final currentUser = widget.controller.currentUser ?? widget.user;
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final currentUser = state.currentUser ?? widget.user;
         final verification = currentUser.verification;
         final palette = tonePaletteFor(currentUser.gender);
         final progressText = '已完成 ${verification.verifiedCount}/3 项认证';
@@ -146,10 +142,10 @@ class _AccountScreenState extends State<AccountScreen> {
                 });
               },
             ),
-            if (widget.controller.errorMessage != null) ...<Widget>[
+            if (state.errorMessage != null) ...<Widget>[
               const SizedBox(height: 18),
               Text(
-                widget.controller.errorMessage!,
+                state.errorMessage!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFFB91C1C),
                     ),
@@ -158,7 +154,10 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed:
-                  widget.controller.isBusy ? null : widget.controller.signOut,
+                  state.isBusy ? null : () async {
+                    context.read<AuthBloc>().add(const AuthSignOutRequested());
+                    await context.read<AuthBloc>().stream.firstWhere((s) => !s.isBusy);
+                  },
               style: FilledButton.styleFrom(
                 backgroundColor: palette.primary,
                 foregroundColor: palette.foreground,
@@ -191,7 +190,8 @@ class _AccountScreenState extends State<AccountScreen> {
       return;
     }
 
-    final success = await widget.controller.updateProfile(
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthProfileUpdated(
       name: draft.name,
       avatarKey: draft.avatarKey,
       gender: draft.gender,
@@ -199,13 +199,14 @@ class _AccountScreenState extends State<AccountScreen> {
       birthMonth: draft.birthMonth,
       city: draft.city,
       signature: draft.signature,
-    );
+    ));
+    final authState = await bloc.stream.firstWhere((s) => !s.isBusy);
     if (!context.mounted) {
       return;
     }
     _showResultSnackBar(
       context,
-      success: success,
+      success: authState.errorMessage == null,
       successMessage: '基础资料已更新。',
     );
   }
@@ -224,16 +225,18 @@ class _AccountScreenState extends State<AccountScreen> {
       return;
     }
 
-    final success = await widget.controller.updateProfile(
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthProfileUpdated(
       introVideoTitle: draft.title,
       introVideoSummary: draft.summary,
-    );
+    ));
+    final authState = await bloc.stream.firstWhere((s) => !s.isBusy);
     if (!context.mounted) {
       return;
     }
     _showResultSnackBar(
       context,
-      success: success,
+      success: authState.errorMessage == null,
       successMessage: '视频介绍已更新。',
     );
   }
@@ -261,13 +264,15 @@ class _AccountScreenState extends State<AccountScreen> {
         summary: draft.summary,
       ),
     ];
-    final success = await widget.controller.updateProfile(works: nextWorks);
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthProfileUpdated(works: nextWorks));
+    final authState = await bloc.stream.firstWhere((s) => !s.isBusy);
     if (!context.mounted) {
       return;
     }
     _showResultSnackBar(
       context,
-      success: success,
+      success: authState.errorMessage == null,
       successMessage: '作品已添加。',
     );
   }
@@ -280,13 +285,15 @@ class _AccountScreenState extends State<AccountScreen> {
     final nextWorks = currentUser.works
         .where((item) => item.id != work.id)
         .toList(growable: false);
-    final success = await widget.controller.updateProfile(works: nextWorks);
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthProfileUpdated(works: nextWorks));
+    final authState = await bloc.stream.firstWhere((s) => !s.isBusy);
     if (!context.mounted) {
       return;
     }
     _showResultSnackBar(
       context,
-      success: success,
+      success: authState.errorMessage == null,
       successMessage: '作品已移除。',
     );
   }
@@ -297,7 +304,7 @@ class _AccountScreenState extends State<AccountScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        return _PhoneVerificationSheet(controller: widget.controller);
+        return const _PhoneVerificationSheet();
       },
     );
     if (completed != true || !context.mounted) {
@@ -316,7 +323,7 @@ class _AccountScreenState extends State<AccountScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        return _IdentityVerificationSheet(controller: widget.controller);
+        return const _IdentityVerificationSheet();
       },
     );
     if (completed != true || !context.mounted) {
@@ -335,7 +342,7 @@ class _AccountScreenState extends State<AccountScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        return _FaceVerificationSheet(controller: widget.controller);
+        return const _FaceVerificationSheet();
       },
     );
     if (completed != true || !context.mounted) {
@@ -360,7 +367,7 @@ class _AccountScreenState extends State<AccountScreen> {
         content: Text(
           success
               ? successMessage
-              : widget.controller.errorMessage ?? '操作失败，请稍后再试。',
+              : context.read<AuthBloc>().state.errorMessage ?? '操作失败，请稍后再试。',
         ),
       ),
     );
@@ -1634,11 +1641,7 @@ class _WorkEditorSheetState extends State<_WorkEditorSheet> {
 }
 
 class _PhoneVerificationSheet extends StatefulWidget {
-  const _PhoneVerificationSheet({
-    required this.controller,
-  });
-
-  final AuthController controller;
+  const _PhoneVerificationSheet();
 
   @override
   State<_PhoneVerificationSheet> createState() =>
@@ -1666,23 +1669,21 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
       return;
     }
 
-    final session = await widget.controller.requestPhoneVerification(
-      phoneNumber: _phoneController.text,
-    );
-    if (!mounted) {
-      return;
-    }
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthPhoneVerificationRequested(phoneNumber: _phoneController.text));
+    final state = await bloc.stream.firstWhere((s) => !s.isBusy);
+    if (!mounted) return;
 
     setState(() {
+      final session = state.pendingPhoneSession;
       _message = session == null
-          ? widget.controller.errorMessage
+          ? state.errorMessage
           : '演示验证码：${session.debugCode}。后续可替换为真实短信服务。';
     });
   }
 
   Future<void> _submit() async {
-    final codeValidation =
-        AuthValidators.verificationCode(_codeController.text);
+    final codeValidation = AuthValidators.verificationCode(_codeController.text);
     if (codeValidation != null) {
       setState(() {
         _message = codeValidation;
@@ -1690,24 +1691,23 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
       return;
     }
 
-    final success = await widget.controller.confirmPhoneVerification(
-      code: _codeController.text,
-    );
-    if (!mounted) {
-      return;
-    }
-    if (success) {
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthPhoneVerificationConfirmed(code: _codeController.text));
+    final state = await bloc.stream.firstWhere((s) => !s.isBusy);
+    if (!mounted) return;
+    if (state.errorMessage == null) {
       Navigator.of(context).pop(true);
       return;
     }
 
     setState(() {
-      _message = widget.controller.errorMessage;
+      _message = state.errorMessage;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = context.watch<AuthBloc>().state.isBusy;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -1719,10 +1719,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            '手机号认证',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('手机号认证', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('当前为演示模式，验证码会直接显示在界面上，方便你完整测试认证闭环。'),
           const SizedBox(height: 18),
@@ -1736,7 +1733,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(
-            onPressed: widget.controller.isBusy ? null : _sendCode,
+            onPressed: isBusy ? null : _sendCode,
             child: const Text('发送验证码'),
           ),
           const SizedBox(height: 18),
@@ -1752,14 +1749,12 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
             const SizedBox(height: 12),
             Text(
               _message!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF0F766E),
-                  ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF0F766E)),
             ),
           ],
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: widget.controller.isBusy ? null : _submit,
+            onPressed: isBusy ? null : _submit,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Text('确认手机号'),
@@ -1772,19 +1767,14 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
 }
 
 class _IdentityVerificationSheet extends StatefulWidget {
-  const _IdentityVerificationSheet({
-    required this.controller,
-  });
-
-  final AuthController controller;
+  const _IdentityVerificationSheet();
 
   @override
   State<_IdentityVerificationSheet> createState() =>
       _IdentityVerificationSheetState();
 }
 
-class _IdentityVerificationSheetState
-    extends State<_IdentityVerificationSheet> {
+class _IdentityVerificationSheetState extends State<_IdentityVerificationSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _idController = TextEditingController();
@@ -1798,24 +1788,23 @@ class _IdentityVerificationSheetState
 
   Future<void> _submit() async {
     final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
-    final success = await widget.controller.submitIdentityVerification(
+    final bloc = context.read<AuthBloc>();
+    bloc.add(AuthIdentityVerificationSubmitted(
       legalName: _nameController.text,
       idNumber: _idController.text,
-    );
-    if (!mounted) {
-      return;
-    }
-    if (success) {
+    ));
+    final state = await bloc.stream.firstWhere((s) => !s.isBusy);
+    if (!mounted) return;
+    if (state.errorMessage == null) {
       Navigator.of(context).pop(true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = context.watch<AuthBloc>().state.isBusy;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -1829,10 +1818,7 @@ class _IdentityVerificationSheetState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              '身份证认证',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('身份证认证', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             const Text('后续可以把这里替换成合规实名服务，当前版本已经打通表单、校验和状态变更。'),
             const SizedBox(height: 18),
@@ -1856,7 +1842,7 @@ class _IdentityVerificationSheetState
             ),
             const SizedBox(height: 22),
             FilledButton(
-              onPressed: widget.controller.isBusy ? null : _submit,
+              onPressed: isBusy ? null : _submit,
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 14),
                 child: Text('提交身份信息'),
@@ -1870,11 +1856,7 @@ class _IdentityVerificationSheetState
 }
 
 class _FaceVerificationSheet extends StatefulWidget {
-  const _FaceVerificationSheet({
-    required this.controller,
-  });
-
-  final AuthController controller;
+  const _FaceVerificationSheet();
 
   @override
   State<_FaceVerificationSheet> createState() => _FaceVerificationSheetState();
@@ -1884,20 +1866,19 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
   bool _confirmed = false;
 
   Future<void> _submit() async {
-    if (!_confirmed) {
-      return;
-    }
-    final success = await widget.controller.completeFaceVerification();
-    if (!mounted) {
-      return;
-    }
-    if (success) {
+    if (!_confirmed) return;
+    final bloc = context.read<AuthBloc>();
+    bloc.add(const AuthFaceVerificationCompleted());
+    final state = await bloc.stream.firstWhere((s) => !s.isBusy);
+    if (!mounted) return;
+    if (state.errorMessage == null) {
       Navigator.of(context).pop(true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = context.watch<AuthBloc>().state.isBusy;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -1909,18 +1890,15 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            '本人头像认证',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('本人头像认证', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('当前版本已经把人脸认证的交互和状态流转跑通，后续可直接接入相机采集和活体检测。'),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(22),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.all(Radius.circular(22)),
             ),
             child: const Text('规则：如果后续更换头像，本人头像认证会自动重置。'),
           ),
@@ -1937,7 +1915,7 @@ class _FaceVerificationSheetState extends State<_FaceVerificationSheet> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: widget.controller.isBusy || !_confirmed ? null : _submit,
+            onPressed: isBusy || !_confirmed ? null : _submit,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Text('开始人脸认证'),

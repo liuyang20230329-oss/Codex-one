@@ -2,72 +2,58 @@ import 'package:codex_one/src/core/persistence/json_preferences_store.dart';
 import 'package:codex_one/src/features/auth/data/demo_auth_repository.dart';
 import 'package:codex_one/src/features/auth/domain/profile_media_work.dart';
 import 'package:codex_one/src/features/auth/domain/user_gender.dart';
-import 'package:codex_one/src/features/auth/presentation/auth_controller.dart';
+import 'package:codex_one/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_hive_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('AuthController', () {
-    test('can sign up, keep the authenticated user, and sign out', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
+  group('AuthBloc', () {
+    late AuthBloc bloc;
+
+    setUp(() async {
+      await setUpTestHive();
+      bloc = AuthBloc(
         repository: await DemoAuthRepository.seeded(
           store: await JsonPreferencesStore.create(),
         ),
       );
+    });
 
-      await controller.signUp(
-        name: 'Liu Yang',
-        phoneNumber: '13800138011',
-        password: 'Password123!',
-      );
+    tearDown(() async {
+      await bloc.close();
+      await tearDownTestHive();
+    });
 
-      expect(controller.currentUser?.email, '13800138011@37degrees.local');
-      expect(controller.status, AuthStatus.authenticated);
+    test('can sign up, keep the authenticated user, and sign out', () async {
+      bloc.add(const AuthSignUpRequested(name: 'Liu Yang', phoneNumber: '13800138011', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
 
-      await controller.signOut();
+      expect(bloc.state.currentUser?.email, '13800138011@37degrees.local');
+      expect(bloc.state.status, AuthStatus.authenticated);
 
-      expect(controller.currentUser, isNull);
-      expect(controller.status, AuthStatus.unauthenticated);
+      bloc.add(const AuthSignOutRequested());
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+
+      expect(bloc.state.currentUser, isNull);
+      expect(bloc.state.status, AuthStatus.unauthenticated);
     });
 
     test('shows a friendly error when the password is incorrect', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
+      bloc.add(const AuthSignInRequested(phoneNumber: '13800138000', password: 'wrong-password'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
 
-      await controller.signIn(
-        phoneNumber: '13800138000',
-        password: 'wrong-password',
-      );
-
-      expect(controller.currentUser, isNull);
-      expect(
-        controller.errorMessage,
-        '密码不正确，请重试。',
-      );
+      expect(bloc.state.currentUser, isNull);
+      expect(bloc.state.errorMessage, '密码不正确，请重试。');
     });
 
     test('persists enriched profile fields and works after update', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
+      bloc.add(const AuthSignUpRequested(name: 'Profile Owner', phoneNumber: '13800138022', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
 
-      await controller.signUp(
-        name: 'Profile Owner',
-        phoneNumber: '13800138022',
-        password: 'Password123!',
-      );
-
-      final updated = await controller.updateProfile(
+      bloc.add(AuthProfileUpdated(
         name: '晚风',
         avatarKey: 'lagoon',
         gender: UserGender.female,
@@ -85,29 +71,18 @@ void main() {
             summary: '一段适合夜里慢慢听完的语音作品。',
           ),
         ],
-      );
+      ));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
 
-      expect(updated, isTrue);
-
-      final restoredController = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
-      final restoredUser = restoredController.currentUser;
-      expect(restoredUser?.name, '晚风');
-      expect(restoredUser?.gender, UserGender.female);
-      expect(restoredUser?.birthYear, 1999);
-      expect(restoredUser?.birthMonth, 6);
-      expect(restoredUser?.city, '杭州');
-      expect(restoredUser?.signature, '喜欢慢一点的语音聊天，也喜欢分享照片。');
-      expect(restoredUser?.introVideoTitle, '一分钟认识我');
-      expect(restoredUser?.works.length, 1);
-      expect(
-        restoredUser?.works.single.type,
-        ProfileMediaWorkType.voice,
-      );
+      expect(bloc.state.currentUser?.name, '晚风');
+      expect(bloc.state.currentUser?.gender, UserGender.female);
+      expect(bloc.state.currentUser?.birthYear, 1999);
+      expect(bloc.state.currentUser?.birthMonth, 6);
+      expect(bloc.state.currentUser?.city, '杭州');
+      expect(bloc.state.currentUser?.signature, '喜欢慢一点的语音聊天，也喜欢分享照片。');
+      expect(bloc.state.currentUser?.introVideoTitle, '一分钟认识我');
+      expect(bloc.state.currentUser?.works.length, 1);
+      expect(bloc.state.currentUser?.works.single.type, ProfileMediaWorkType.voice);
     });
   });
 }

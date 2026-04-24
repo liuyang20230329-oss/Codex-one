@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/brand/app_brand.dart';
 import '../../../core/theme/user_tone_palette.dart';
 import '../../auth/domain/app_user.dart';
 import '../domain/circle_post.dart';
-import 'circle_controller.dart';
+import 'bloc/circle_bloc.dart';
 
 class CirclePostDetailScreen extends StatefulWidget {
   const CirclePostDetailScreen({
     super.key,
-    required this.controller,
     required this.user,
     required this.post,
   });
 
-  final CircleController controller;
   final AppUser user;
   final CirclePost post;
 
@@ -32,7 +31,7 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.controller.loadPostDetail(widget.post.id);
+      context.read<CircleBloc>().add(CirclePostDetailLoaded(widget.post.id));
     });
   }
 
@@ -52,23 +51,19 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
       return;
     }
 
-    final detail = await widget.controller.addComment(
-      postId: widget.post.id,
-      content: content,
-      parentCommentId: _replyToCommentId,
-    );
-    if (!mounted) {
-      return;
-    }
-    if (detail == null) {
+    context.read<CircleBloc>().add(CircleCommentAdded(
+          postId: widget.post.id,
+          content: content,
+          parentCommentId: _replyToCommentId,
+        ));
+
+    final state = await context.read<CircleBloc>().stream.firstWhere((s) => !s.isSubmittingComment);
+    if (!mounted) return;
+    if (state.detailFor(widget.post.id) == null) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.controller.detailErrorMessage ?? '评论发送失败，请稍后再试。',
-            ),
-          ),
+          SnackBar(content: Text(state.detailErrorMessage ?? '评论发送失败，请稍后再试。')),
         );
       return;
     }
@@ -91,24 +86,17 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
         return const _CircleReportReasonSheet();
       },
     );
-    if (!mounted || reason == null) {
-      return;
-    }
+    if (!mounted || reason == null) return;
 
-    final success = await widget.controller.reportPost(
-      postId: widget.post.id,
-      reason: reason,
-    );
-    if (!mounted) {
-      return;
-    }
+    final bloc = context.read<CircleBloc>();
+    bloc.add(CirclePostReported(postId: widget.post.id, reason: reason));
+    final state = await bloc.stream.firstWhere((s) => !s.isReporting);
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            success ? '举报已提交，我们会尽快核查。' : '举报提交失败，请稍后再试。',
-          ),
+          content: Text(state.detailErrorMessage != null ? '举报提交失败，请稍后再试。' : '举报已提交，我们会尽快核查。'),
         ),
       );
   }
@@ -116,14 +104,10 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = tonePaletteFor(widget.user.gender);
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final detail = widget.controller.detailFor(widget.post.id) ??
-            CirclePostDetail(
-              post: widget.post,
-              comments: const <CircleComment>[],
-            );
+    return BlocBuilder<CircleBloc, CircleState>(
+      builder: (context, circleState) {
+        final detail = circleState.detailFor(widget.post.id) ??
+            CirclePostDetail(post: widget.post, comments: const <CircleComment>[]);
         final post = detail.post;
 
         return Scaffold(
@@ -137,38 +121,29 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
               IconButton(
                 key: const ValueKey<String>('circle-detail-report'),
                 tooltip: '举报',
-                onPressed: widget.controller.isReporting ? null : _reportPost,
+                onPressed: circleState.isReporting ? null : _reportPost,
                 icon: const Icon(Icons.flag_outlined),
               ),
             ],
           ),
           body: Column(
             children: <Widget>[
-              if (widget.controller.isDetailLoading &&
-                  widget.controller.detailFor(widget.post.id) == null)
+              if (circleState.isDetailLoading && circleState.detailFor(widget.post.id) == null)
                 const LinearProgressIndicator(minHeight: 2),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   children: <Widget>[
-                    _CircleDetailPostCard(
-                      palette: palette,
-                      post: post,
-                    ),
+                    _CircleDetailPostCard(palette: palette, post: post),
                     const SizedBox(height: 18),
-                    _CircleCommentHeader(
-                      count: detail.comments.length,
-                      palette: palette,
-                    ),
+                    _CircleCommentHeader(count: detail.comments.length, palette: palette),
                     const SizedBox(height: 12),
-                    if (widget.controller.detailErrorMessage != null)
+                    if (circleState.detailErrorMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _InlineErrorBanner(
-                          message: widget.controller.detailErrorMessage!,
-                          onRetry: () => widget.controller.loadPostDetail(
-                            widget.post.id,
-                          ),
+                          message: circleState.detailErrorMessage!,
+                          onRetry: () => context.read<CircleBloc>().add(CirclePostDetailLoaded(widget.post.id)),
                         ),
                       ),
                     if (detail.comments.isEmpty)
@@ -207,9 +182,7 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   decoration: BoxDecoration(
                     color: palette.cardBackground,
-                    border: Border(
-                      top: BorderSide(color: palette.outline),
-                    ),
+                    border: Border(top: BorderSide(color: palette.outline)),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -217,25 +190,14 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
                       if (_replyToCommentId != null)
                         Container(
                           margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.surface,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(16)),
                           child: Row(
                             children: <Widget>[
                               Expanded(
                                 child: Text(
                                   '正在回复 ${_replyToAuthorName ?? '这条评论'}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                               ),
                               IconButton(
@@ -254,57 +216,34 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
                         children: <Widget>[
                           Expanded(
                             child: TextField(
-                              key: const ValueKey<String>(
-                                'circle-detail-comment-input',
-                              ),
+                              key: const ValueKey<String>('circle-detail-comment-input'),
                               controller: _commentController,
                               focusNode: _commentFocusNode,
                               minLines: 1,
                               maxLines: 4,
                               textInputAction: TextInputAction.send,
                               onSubmitted: (_) {
-                                if (!widget.controller.isSubmittingComment) {
-                                  _submitComment();
-                                }
+                                if (!circleState.isSubmittingComment) _submitComment();
                               },
                               decoration: InputDecoration(
-                                hintText: _replyToCommentId == null
-                                    ? '说点什么，让这条动态热起来'
-                                    : '继续补充你的回复',
+                                hintText: _replyToCommentId == null ? '说点什么，让这条动态热起来' : '继续补充你的回复',
                                 filled: true,
                                 fillColor: palette.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
-                                ),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           FilledButton(
-                            key: const ValueKey<String>(
-                              'circle-detail-comment-submit',
-                            ),
-                            onPressed: widget.controller.isSubmittingComment
-                                ? null
-                                : _submitComment,
+                            key: const ValueKey<String>('circle-detail-comment-submit'),
+                            onPressed: circleState.isSubmittingComment ? null : _submitComment,
                             style: FilledButton.styleFrom(
                               backgroundColor: palette.primary,
                               foregroundColor: palette.foreground,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 18,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                             ),
-                            child: widget.controller.isSubmittingComment
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
+                            child: circleState.isSubmittingComment
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                 : const Text('发送'),
                           ),
                         ],
@@ -322,10 +261,7 @@ class _CirclePostDetailScreenState extends State<CirclePostDetailScreen> {
 }
 
 class _CircleDetailPostCard extends StatelessWidget {
-  const _CircleDetailPostCard({
-    required this.palette,
-    required this.post,
-  });
+  const _CircleDetailPostCard({required this.palette, required this.post});
 
   final UserTonePalette palette;
   final CirclePost post;
@@ -354,38 +290,24 @@ class _CircleDetailPostCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      post.authorName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text(post.authorName, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(
                       '${post.location} · ${post.distance} · ${post.createdAtLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppBrand.ink.withValues(alpha: 0.68),
-                          ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppBrand.ink.withValues(alpha: 0.68)),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: palette.highlight,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: palette.highlight, borderRadius: BorderRadius.circular(999)),
                 child: Text(post.verificationLabel),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            post.content,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          Text(post.content, style: Theme.of(context).textTheme.bodyLarge),
           if (post.attachments.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             Wrap(
@@ -393,14 +315,8 @@ class _CircleDetailPostCard extends StatelessWidget {
               runSpacing: 8,
               children: post.attachments.map((attachment) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: palette.surface,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: palette.surface, borderRadius: BorderRadius.circular(999)),
                   child: Text(attachment.label),
                 );
               }).toList(),
@@ -425,10 +341,7 @@ class _CircleDetailPostCard extends StatelessWidget {
 }
 
 class _CircleCommentHeader extends StatelessWidget {
-  const _CircleCommentHeader({
-    required this.count,
-    required this.palette,
-  });
+  const _CircleCommentHeader({required this.count, required this.palette});
 
   final int count;
   final UserTonePalette palette;
@@ -437,19 +350,11 @@ class _CircleCommentHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Text(
-          '评论 $count',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-        ),
-        const SizedBox(width: 10),
+        Text('评论 $count', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: palette.highlight,
-            borderRadius: BorderRadius.circular(999),
-          ),
+          decoration: BoxDecoration(color: palette.highlight, borderRadius: BorderRadius.circular(999)),
           child: const Text('支持回复与举报'),
         ),
       ],
@@ -496,38 +401,20 @@ class _CircleCommentCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      comment.authorName,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
+                    Text(comment.authorName, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
-                    Text(
-                      comment.createdAtLabel,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppBrand.ink.withValues(alpha: 0.56),
-                          ),
-                    ),
+                    Text(comment.createdAtLabel, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppBrand.ink.withValues(alpha: 0.56))),
                   ],
                 ),
               ),
-              TextButton(
-                onPressed: onReply,
-                child: const Text('回复'),
-              ),
+              TextButton(onPressed: onReply, child: const Text('回复')),
             ],
           ),
           const SizedBox(height: 10),
           if (replyTargetName != null && replyTargetName!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                '回复 $replyTargetName',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppBrand.ink.withValues(alpha: 0.56),
-                    ),
-              ),
+              child: Text('回复 $replyTargetName', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppBrand.ink.withValues(alpha: 0.56))),
             ),
           Text(comment.content),
         ],
@@ -537,9 +424,7 @@ class _CircleCommentCard extends StatelessWidget {
 }
 
 class _EmptyCommentsCard extends StatelessWidget {
-  const _EmptyCommentsCard({
-    required this.palette,
-  });
+  const _EmptyCommentsCard({required this.palette});
 
   final UserTonePalette palette;
 
@@ -555,16 +440,11 @@ class _EmptyCommentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            '这条动态还没有评论',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('这条动态还没有评论', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
             '你可以先说一句打招呼的话，让互动从这里开始。',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppBrand.ink.withValues(alpha: 0.68),
-                ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppBrand.ink.withValues(alpha: 0.68)),
           ),
         ],
       ),
@@ -573,10 +453,7 @@ class _EmptyCommentsCard extends StatelessWidget {
 }
 
 class _InlineErrorBanner extends StatelessWidget {
-  const _InlineErrorBanner({
-    required this.message,
-    required this.onRetry,
-  });
+  const _InlineErrorBanner({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -586,19 +463,13 @@ class _InlineErrorBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F2),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFFFFF1F2), borderRadius: BorderRadius.all(Radius.circular(16))),
       child: Row(
         children: <Widget>[
           const Icon(Icons.info_outline),
           const SizedBox(width: 10),
           Expanded(child: Text(message)),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('重试'),
-          ),
+          TextButton(onPressed: onRetry, child: const Text('重试')),
         ],
       ),
     );
@@ -626,10 +497,7 @@ class _CircleReportReasonSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                '选择举报原因',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('选择举报原因', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               const Text('提交后这条举报会进入平台审核流。'),
               const SizedBox(height: 12),

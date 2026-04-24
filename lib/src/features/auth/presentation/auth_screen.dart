@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/brand/app_brand.dart';
 import '../domain/social_login_provider.dart';
-import 'auth_controller.dart';
+import 'bloc/auth_bloc.dart';
 import 'widgets/sign_in_form.dart';
 import 'widgets/sign_up_form.dart';
 
@@ -14,13 +15,11 @@ enum AuthMode {
 class AuthScreen extends StatefulWidget {
   const AuthScreen({
     super.key,
-    required this.controller,
     required this.statusLabel,
     required this.statusMessage,
     required this.showDemoAccount,
   });
 
-  final AuthController controller;
   final String statusLabel;
   final String statusMessage;
   final bool showDemoAccount;
@@ -36,7 +35,7 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _mode = mode;
     });
-    widget.controller.clearError();
+    context.read<AuthBloc>().add(const AuthErrorCleared());
   }
 
   @override
@@ -66,9 +65,8 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: AnimatedBuilder(
-                      animation: widget.controller,
-                      builder: (context, _) {
+                    child: BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, state) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
@@ -111,8 +109,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               },
                             ),
                             const SizedBox(height: 20),
-                            if (widget.controller.errorMessage != null) ...<Widget>[
-                              _ErrorBanner(message: widget.controller.errorMessage!),
+                            if (state.errorMessage != null) ...<Widget>[
+                              _ErrorBanner(message: state.errorMessage!),
                               const SizedBox(height: 16),
                             ],
                             if (widget.showDemoAccount) ...<Widget>[
@@ -121,33 +119,55 @@ class _AuthScreenState extends State<AuthScreen> {
                             ],
                             if (_mode == AuthMode.signIn)
                               SignInForm(
-                                isBusy: widget.controller.isBusy,
-                                onSubmit: widget.controller.signIn,
+                                isBusy: state.isBusy,
+                                onSubmit: ({
+                                  required String phoneNumber,
+                                  required String password,
+                                }) async {
+                                  context.read<AuthBloc>().add(
+                                        AuthSignInRequested(
+                                          phoneNumber: phoneNumber,
+                                          password: password,
+                                        ),
+                                      );
+                                  await context.read<AuthBloc>().stream.firstWhere(
+                                        (s) => !s.isBusy,
+                                      );
+                                },
                                 onSwitchMode: () => _switchMode(AuthMode.signUp),
                                 onWechatLogin: () {
-                                  widget.controller.triggerSocialLogin(
-                                    SocialLoginProvider.wechat,
-                                  );
+                                  context.read<AuthBloc>().add(
+                                        const AuthSocialLoginTriggered(
+                                          SocialLoginProvider.wechat,
+                                        ),
+                                      );
                                 },
                                 onQqLogin: () {
-                                  widget.controller.triggerSocialLogin(
-                                    SocialLoginProvider.qq,
-                                  );
+                                  context.read<AuthBloc>().add(
+                                        const AuthSocialLoginTriggered(
+                                          SocialLoginProvider.qq,
+                                        ),
+                                      );
                                 },
                               )
                             else
                               SignUpForm(
-                                isBusy: widget.controller.isBusy,
+                                isBusy: state.isBusy,
                                 onSubmit: ({
                                   required String name,
                                   required String phoneNumber,
                                   required String password,
-                                }) {
-                                  return widget.controller.signUp(
-                                    name: name,
-                                    phoneNumber: phoneNumber,
-                                    password: password,
-                                  );
+                                }) async {
+                                  context.read<AuthBloc>().add(
+                                        AuthSignUpRequested(
+                                          name: name,
+                                          phoneNumber: phoneNumber,
+                                          password: password,
+                                        ),
+                                      );
+                                  await context.read<AuthBloc>().stream.firstWhere(
+                                        (s) => !s.isBusy,
+                                      );
                                 },
                                 onSwitchMode: () => _switchMode(AuthMode.signIn),
                               ),
@@ -252,7 +272,7 @@ class _DemoAccountCard extends StatelessWidget {
           SizedBox(height: 6),
           Text('密码：Password123!'),
           SizedBox(height: 6),
-          Text('登录后可在“我的”里继续完成手机号、实名和本人认证。'),
+          Text('登录后可在"我的"里继续完成手机号、实名和本人认证。'),
         ],
       ),
     );

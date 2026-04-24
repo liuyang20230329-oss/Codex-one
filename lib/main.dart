@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'src/core/bootstrap/app_bootstrap.dart';
+import 'src/core/persistence/hive_init.dart';
 
 Future<void> main() async {
-  // Startup awaits bootstrap so the first frame already knows which backend
-  // mode and repositories should be used.
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeHive();
   final bootstrap = await AppBootstrap.initialize();
   runApp(CodexOneApp(bootstrap: bootstrap));
 }

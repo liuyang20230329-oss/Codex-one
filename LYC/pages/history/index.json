@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "成长",
-  "usingComponents": {
-    "login-sheet": "/components/login-sheet/index"
-  }
-}

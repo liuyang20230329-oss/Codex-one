@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/brand/app_brand.dart';
 import '../../../core/theme/user_tone_palette.dart';
@@ -6,11 +7,11 @@ import '../../account/presentation/account_screen.dart';
 import '../../auth/domain/app_user.dart';
 import '../../auth/domain/profile_media_work.dart';
 import '../../auth/domain/user_gender.dart';
-import '../../auth/presentation/auth_controller.dart';
-import '../../chat/presentation/chat_controller.dart';
+import '../../auth/presentation/bloc/auth_bloc.dart';
+import '../../chat/presentation/bloc/chat_bloc.dart';
 import '../../chat/presentation/chat_screen.dart';
 import '../../circle/domain/circle_post.dart';
-import '../../circle/presentation/circle_controller.dart';
+import '../../circle/presentation/bloc/circle_bloc.dart';
 import '../../circle/presentation/circle_post_detail_screen.dart';
 
 /// Hosts the four main modules and keeps the page shell synchronized with the
@@ -18,17 +19,11 @@ import '../../circle/presentation/circle_post_detail_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
-    required this.controller,
-    required this.chatController,
-    required this.circleController,
     required this.user,
     required this.statusLabel,
     required this.statusMessage,
   });
 
-  final AuthController controller;
-  final ChatController chatController;
-  final CircleController circleController;
   final AppUser user;
   final String statusLabel;
   final String statusMessage;
@@ -62,18 +57,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Chat and circle data both depend on the current profile and
-    // verification state, so the shell refreshes them together.
-    widget.chatController.syncUser(widget.user);
-    widget.circleController.syncUser(widget.user);
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.currentUser ?? widget.user;
+    context.read<ChatBloc>().add(ChatUserSynced(user));
+    context.read<CircleBloc>().add(CircleUserSynced(user));
   }
 
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_didUserContextChange(oldWidget.user, widget.user)) {
-      widget.chatController.syncUser(widget.user);
-      widget.circleController.syncUser(widget.user);
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.currentUser ?? widget.user;
+    if (_didUserContextChange(oldWidget.user, user)) {
+      context.read<ChatBloc>().add(ChatUserSynced(user));
+      context.read<CircleBloc>().add(CircleUserSynced(user));
     }
   }
 
@@ -99,151 +96,145 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge(
-        <Listenable>[
-          widget.controller,
-          widget.chatController,
-          widget.circleController,
-        ],
-      ),
-      builder: (context, _) {
-        final user = widget.controller.currentUser ?? widget.user;
-        final unreadCount = widget.chatController.totalUnreadCount;
-        final selectedTab = _tabs[_selectedIndex];
-        final screens = <Widget>[
-          PlazaTab(
-            user: user,
-            statusLabel: widget.statusLabel,
-            statusMessage: widget.statusMessage,
-          ),
-          CircleTab(
-            controller: widget.circleController,
-            user: user,
-          ),
-          ChatScreen(
-            controller: widget.chatController,
-            user: user,
-          ),
-          AccountScreen(
-            controller: widget.controller,
-            user: user,
-          ),
-        ];
-        final palette = tonePaletteFor(user.gender);
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final user = authState.currentUser ?? widget.user;
+        return BlocBuilder<ChatBloc, ChatState>(
+          builder: (context, chatState) {
+            final unreadCount = chatState.totalUnreadCount;
+            final selectedTab = _tabs[_selectedIndex];
+            final screens = <Widget>[
+              PlazaTab(
+                user: user,
+                statusLabel: widget.statusLabel,
+                statusMessage: widget.statusMessage,
+              ),
+              CircleTab(
+                user: user,
+              ),
+              ChatScreen(
+                user: user,
+              ),
+              AccountScreen(
+                user: user,
+              ),
+            ];
+            final palette = tonePaletteFor(user.gender);
 
-        return Scaffold(
-          backgroundColor: palette.primary,
-          body: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: palette.shellGradient,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: _HomeShellHeader(
-                      user: user,
-                      palette: palette,
-                      selectedLabel: selectedTab.label,
-                      selectedSubtitle: selectedTab.subtitle,
-                      unreadCount: unreadCount,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: palette.canvas,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(34),
+            return Scaffold(
+              backgroundColor: palette.primary,
+              body: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: palette.shellGradient,
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: _HomeShellHeader(
+                          user: user,
+                          palette: palette,
+                          selectedLabel: selectedTab.label,
+                          selectedSubtitle: selectedTab.subtitle,
+                          unreadCount: unreadCount,
                         ),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.10),
-                            blurRadius: 30,
-                            offset: const Offset(0, -8),
+                      ),
+                      const SizedBox(height: 18),
+                      Expanded(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: palette.canvas,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(34),
+                            ),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 30,
+                                offset: const Offset(0, -8),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(34),
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(34),
+                            ),
+                            child: IndexedStack(
+                              index: _selectedIndex,
+                              children: screens,
+                            ),
+                          ),
                         ),
-                        child: IndexedStack(
-                          index: _selectedIndex,
-                          children: screens,
-                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          bottomNavigationBar: SafeArea(
-            top: false,
-            minimum: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.cardBackground.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: palette.outline),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+              bottomNavigationBar: SafeArea(
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: palette.cardBackground.withValues(alpha: 0.96),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: palette.outline),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
+                  child: NavigationBar(
+                    height: 74,
+                    backgroundColor: Colors.transparent,
+                    indicatorColor: palette.highlight,
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (index) {
+                      setState(() {
+                        _selectedIndex = index;
+                      });
+                    },
+                    destinations: <Widget>[
+                      const NavigationDestination(
+                        icon: Icon(Icons.explore_outlined),
+                        selectedIcon: Icon(Icons.explore),
+                        label: '广场',
+                      ),
+                      const NavigationDestination(
+                        icon: Icon(Icons.bubble_chart_outlined),
+                        selectedIcon: Icon(Icons.bubble_chart),
+                        label: '圈子',
+                      ),
+                      NavigationDestination(
+                        icon: unreadCount > 0
+                            ? Badge.count(
+                                count: unreadCount,
+                                child: const Icon(Icons.chat_bubble_outline),
+                              )
+                            : const Icon(Icons.chat_bubble_outline),
+                        selectedIcon: unreadCount > 0
+                            ? Badge.count(
+                                count: unreadCount,
+                                child: const Icon(Icons.chat_bubble),
+                              )
+                            : const Icon(Icons.chat_bubble),
+                        label: '消息',
+                      ),
+                      const NavigationDestination(
+                        icon: Icon(Icons.person_outline),
+                        selectedIcon: Icon(Icons.person),
+                        label: '我的',
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: NavigationBar(
-                height: 74,
-                backgroundColor: Colors.transparent,
-                indicatorColor: palette.highlight,
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-                destinations: <Widget>[
-                  const NavigationDestination(
-                    icon: Icon(Icons.explore_outlined),
-                    selectedIcon: Icon(Icons.explore),
-                    label: '广场',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.bubble_chart_outlined),
-                    selectedIcon: Icon(Icons.bubble_chart),
-                    label: '圈子',
-                  ),
-                  NavigationDestination(
-                    icon: unreadCount > 0
-                        ? Badge.count(
-                            count: unreadCount,
-                            child: const Icon(Icons.chat_bubble_outline),
-                          )
-                        : const Icon(Icons.chat_bubble_outline),
-                    selectedIcon: unreadCount > 0
-                        ? Badge.count(
-                            count: unreadCount,
-                            child: const Icon(Icons.chat_bubble),
-                          )
-                        : const Icon(Icons.chat_bubble),
-                    label: '消息',
-                  ),
-                  const NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: '我的',
-                  ),
-                ],
-              ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -774,11 +765,9 @@ class _PlazaTabState extends State<PlazaTab> {
 class CircleTab extends StatefulWidget {
   const CircleTab({
     super.key,
-    required this.controller,
     required this.user,
   });
 
-  final CircleController controller;
   final AppUser user;
 
   @override
@@ -793,7 +782,6 @@ class _CircleTabState extends State<CircleTab> {
       MaterialPageRoute<void>(
         builder: (context) {
           return CirclePostDetailScreen(
-            controller: widget.controller,
             user: widget.user,
             post: post,
           );
@@ -835,16 +823,18 @@ class _CircleTabState extends State<CircleTab> {
       return;
     }
 
-    final post = await widget.controller.publishPost(draft.publishInput);
+    final bloc = context.read<CircleBloc>();
+    bloc.add(CirclePostPublished(draft.publishInput));
+    final state = await bloc.stream.firstWhere((s) => !s.isPublishing);
     if (!mounted) {
       return;
     }
-    if (post == null) {
+    if (state.posts.isEmpty || state.errorMessage != null) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(widget.controller.errorMessage ?? '当前无法发布动态，请稍后再试。'),
+            content: Text(state.errorMessage ?? '当前无法发布动态，请稍后再试。'),
           ),
         );
       return;
@@ -864,129 +854,134 @@ class _CircleTabState extends State<CircleTab> {
   @override
   Widget build(BuildContext context) {
     final palette = tonePaletteFor(widget.user.gender);
-    final posts = widget.controller.posts;
-    final isLoading = widget.controller.isLoading;
-    final isPublishing = widget.controller.isPublishing;
-    final errorMessage = widget.controller.errorMessage;
+    return BlocBuilder<CircleBloc, CircleState>(
+      builder: (context, circleState) {
+        final posts = circleState.posts;
+        final isLoading = circleState.isLoading;
+        final isPublishing = circleState.isPublishing;
+        final errorMessage = circleState.errorMessage;
 
-    return Stack(
-      children: <Widget>[
-        RefreshIndicator(
-          onRefresh: widget.controller.refreshPosts,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 108),
-            children: <Widget>[
-              const _SectionHeadline(
-                eyebrow: '圈子动态',
-                title: '附近内容流要有氛围，也要有发布秩序',
-                description: '动态入口保留全屏发布方式，地址、图片、语音和作品都继续通过独立组件挑选。',
-              ),
-              const SizedBox(height: 18),
-              _TonePanel(
-                palette: palette,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      '圈子列表现在会优先加载真实接口数据；发布前仍建议先补齐头像、签名和认证信息，这样动态更容易被认真浏览。',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+        return Stack(
+          children: <Widget>[
+            RefreshIndicator(
+              onRefresh: () async {
+                context.read<CircleBloc>().add(const CirclePostsRefreshed());
+                await context.read<CircleBloc>().stream.firstWhere((s) => !s.isLoading);
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 108),
+                children: <Widget>[
+                  const _SectionHeadline(
+                    eyebrow: '圈子动态',
+                    title: '附近内容流要有氛围，也要有发布秩序',
+                    description: '动态入口保留全屏发布方式，地址、图片、语音和作品都继续通过独立组件挑选。',
+                  ),
+                  const SizedBox(height: 18),
+                  _TonePanel(
+                    palette: palette,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Expanded(
-                          child: _SummaryMetricCard(
-                            palette: palette,
-                            label: '附近动态',
-                            value: '${posts.length}',
-                            hint: '已进入真实内容流',
-                          ),
+                        Text(
+                          '圈子列表现在会优先加载真实接口数据；发布前仍建议先补齐头像、签名和认证信息，这样动态更容易被认真浏览。',
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _SummaryMetricCard(
-                            palette: palette,
-                            label: '可发布素材',
-                            value: '5项',
-                            hint: '文案 / 地址 / 图片 / 语音 / 作品',
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (errorMessage != null) ...<Widget>[
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: palette.surface,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
+                        const SizedBox(height: 16),
+                        Row(
                           children: <Widget>[
-                            const Icon(Icons.wifi_tethering_error_rounded),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(errorMessage)),
-                            TextButton(
-                              onPressed: isLoading
-                                  ? null
-                                  : widget.controller.refreshPosts,
-                              child: const Text('重试'),
+                            Expanded(
+                              child: _SummaryMetricCard(
+                                palette: palette,
+                                label: '附近动态',
+                                value: '${posts.length}',
+                                hint: '已进入真实内容流',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _SummaryMetricCard(
+                                palette: palette,
+                                label: '可发布素材',
+                                value: '5项',
+                                hint: '文案 / 地址 / 图片 / 语音 / 作品',
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              if (isLoading && posts.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: Column(
-                      children: <Widget>[
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('圈子列表加载中...'),
+                        if (errorMessage != null) ...<Widget>[
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: palette.surface,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: <Widget>[
+                                const Icon(Icons.wifi_tethering_error_rounded),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(errorMessage)),
+                                TextButton(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () => context.read<CircleBloc>().add(const CirclePostsRefreshed()),
+                                  child: const Text('重试'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                )
-              else if (posts.isEmpty)
-                _TonePanel(
-                  palette: palette,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '圈子里还没有加载到可展示的内容。',
-                        style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(height: 18),
+                  if (isLoading && posts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Column(
+                          children: <Widget>[
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('圈子列表加载中...'),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text('你可以先发布第一条动态，或者下拉刷新后再试一次。'),
-                      const SizedBox(height: 14),
-                      FilledButton(
-                        onPressed: widget.controller.refreshPosts,
-                        child: const Text('重新加载'),
+                    )
+                  else if (posts.isEmpty)
+                    _TonePanel(
+                      palette: palette,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '圈子里还没有加载到可展示的内容。',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('你可以先发布第一条动态，或者下拉刷新后再试一次。'),
+                          const SizedBox(height: 14),
+                          FilledButton(
+                            onPressed: () => context.read<CircleBloc>().add(const CirclePostsRefreshed()),
+                            child: const Text('重新加载'),
+                          ),
+                        ],
                       ),
+                    )
+                  else
+                    for (final post in posts) ...<Widget>[
+                      _CirclePostFeedCard(
+                        post: post,
+                        palette: palette,
+                        onTap: () => _openPostDetail(post),
+                      ),
+                      const SizedBox(height: 12),
                     ],
-                  ),
-                )
-              else
-                for (final post in posts) ...<Widget>[
-                  _CirclePostFeedCard(
-                    post: post,
-                    palette: palette,
-                    onTap: () => _openPostDetail(post),
-                  ),
-                  const SizedBox(height: 12),
                 ],
-            ],
-          ),
-        ),
-        Positioned(
+              ),
+            ),
+          Positioned(
           right: 20,
           bottom: 20,
           child: FloatingActionButton.extended(
@@ -1008,6 +1003,8 @@ class _CircleTabState extends State<CircleTab> {
           ),
         ),
       ],
+    );
+      },
     );
   }
 }
@@ -2731,7 +2728,7 @@ class _CirclePostDraft {
                 ? '作品 ${selectedWorks.first.title}'
                 : '作品 ${selectedWorks.length}个',
             type: CircleAttachmentType.work,
-          ),
+        ),
       ],
     );
   }

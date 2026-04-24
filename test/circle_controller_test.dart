@@ -4,15 +4,16 @@ import 'package:codex_one/src/features/auth/domain/app_user.dart';
 import 'package:codex_one/src/features/auth/domain/verification_status.dart';
 import 'package:codex_one/src/features/circle/data/demo_circle_repository.dart';
 import 'package:codex_one/src/features/circle/domain/circle_post.dart';
-import 'package:codex_one/src/features/circle/presentation/circle_controller.dart';
+import 'package:codex_one/src/features/circle/presentation/bloc/circle_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_hive_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('CircleController', () {
-    late CircleController controller;
+  group('CircleBloc', () {
+    late CircleBloc bloc;
 
     const user = AppUser(
       id: 'circle-user',
@@ -26,82 +27,79 @@ void main() {
       ),
     );
 
+    Future<void> waitForIdle() async {
+      await bloc.stream.firstWhere((s) => s.isLoading || s.isPublishing || s.isDetailLoading || s.isSubmittingComment || s.isReporting);
+      await bloc.stream.firstWhere((s) => !s.isLoading && !s.isPublishing && !s.isDetailLoading && !s.isSubmittingComment && !s.isReporting);
+    }
+
     setUp(() async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final store = await JsonPreferencesStore.create();
-      controller = CircleController(
-        repository: DemoCircleRepository(store: store),
+      await setUpTestHive();
+      bloc = CircleBloc(
+        repository: DemoCircleRepository(store: await JsonPreferencesStore.create()),
       );
-      await controller.syncUser(user);
+      bloc.add(const CircleUserSynced(user));
+      await waitForIdle();
     });
 
-    tearDown(() {
-      controller.dispose();
+    tearDown(() async {
+      await bloc.close();
+      await tearDownTestHive();
     });
 
     test('loads seeded posts and prepends a published post', () async {
-      expect(controller.posts, isNotEmpty);
-      final originalCount = controller.posts.length;
+      expect(bloc.state.posts, isNotEmpty);
+      final originalCount = bloc.state.posts.length;
 
-      final post = await controller.publishPost(
-        const CirclePostInput(
-          content: '测试发布一条真实仓库动态。',
-          location: '上海·徐汇·武康路',
-          attachments: <CirclePostAttachment>[
-            CirclePostAttachment(
-              label: '图片 2张',
-              type: CircleAttachmentType.image,
-            ),
-          ],
-        ),
-      );
+      bloc.add(const CirclePostPublished(CirclePostInput(
+        content: '测试发布一条真实仓库动态。',
+        location: '上海·徐汇·武康路',
+        attachments: <CirclePostAttachment>[
+          CirclePostAttachment(label: '图片 2', type: CircleAttachmentType.image),
+        ],
+      )));
+      await waitForIdle();
 
-      expect(post, isNotNull);
-      expect(controller.posts.length, originalCount + 1);
-      expect(controller.posts.first.content, '测试发布一条真实仓库动态。');
-      expect(controller.posts.first.attachmentLabels, <String>['图片 2张']);
+      expect(bloc.state.posts.length, originalCount + 1);
+      expect(bloc.state.posts.first.content, '测试发布一条真实仓库动态。');
+      expect(bloc.state.posts.first.attachmentLabels, <String>['图片 2']);
     });
 
     test('loads detail and updates count after adding a comment', () async {
-      final detail = await controller.loadPostDetail('circle-1');
+      bloc.add(const CirclePostDetailLoaded('circle-1'));
+      await waitForIdle();
 
+      final detail = bloc.state.detailFor('circle-1');
       expect(detail, isNotNull);
       expect(detail!.comments, isNotEmpty);
       final originalCount = detail.comments.length;
 
-      final updated = await controller.addComment(
-        postId: 'circle-1',
-        content: '这条夜景动态的氛围感很好。',
-      );
+      bloc.add(const CircleCommentAdded(postId: 'circle-1', content: '这条夜景动态的氛围感很好。'));
+      await waitForIdle();
 
+      final updated = bloc.state.detailFor('circle-1');
       expect(updated, isNotNull);
       expect(updated!.comments.length, originalCount + 1);
       expect(updated.comments.last.content, '这条夜景动态的氛围感很好。');
-      expect(
-        controller.posts.firstWhere((item) => item.id == 'circle-1').comments,
-        originalCount + 1,
-      );
+      expect(bloc.state.posts.firstWhere((item) => item.id == 'circle-1').comments, originalCount + 1);
     });
 
     test('supports reply comment and reporting flow', () async {
-      final detail = await controller.loadPostDetail('circle-1');
+      bloc.add(const CirclePostDetailLoaded('circle-1'));
+      await waitForIdle();
+      final detail = bloc.state.detailFor('circle-1');
       final replyTarget = detail!.comments.first;
 
-      final updated = await controller.addComment(
-        postId: 'circle-1',
-        content: '收到，我晚点来听。',
-        parentCommentId: replyTarget.id,
-      );
+      bloc.add(CircleCommentAdded(postId: 'circle-1', content: '收到，我晚点来听。', parentCommentId: replyTarget.id));
+      await waitForIdle();
 
+      final updated = bloc.state.detailFor('circle-1');
       expect(updated, isNotNull);
       expect(updated!.comments.last.parentCommentId, replyTarget.id);
 
-      final reported = await controller.reportPost(
-        postId: 'circle-1',
-        reason: '骚扰或冒犯',
-      );
+      bloc.add(const CirclePostReported(postId: 'circle-1', reason: '骚扰或冒犯'));
+      await waitForIdle();
 
-      expect(reported, isTrue);
+      expect(bloc.state.detailErrorMessage, isNull);
     });
   });
 }

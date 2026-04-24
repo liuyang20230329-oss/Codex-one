@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "内容分类",
-  "usingComponents": {
-    "lesson-card": "/components/lesson-card/index"
-  }
-}

@@ -1,169 +1,100 @@
 import 'package:codex_one/src/core/persistence/json_preferences_store.dart';
 import 'package:codex_one/src/features/auth/data/demo_auth_repository.dart';
 import 'package:codex_one/src/features/auth/domain/verification_status.dart';
-import 'package:codex_one/src/features/auth/presentation/auth_controller.dart';
+import 'package:codex_one/src/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_hive_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Account verification flow', () {
-    test('can verify phone with the demo code', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
+    late AuthBloc bloc;
+
+    Future<void> createBloc() async {
+      await setUpTestHive();
+      bloc = AuthBloc(
         repository: await DemoAuthRepository.seeded(
           store: await JsonPreferencesStore.create(),
         ),
       );
+    }
 
-      await controller.signUp(
-        name: 'Liu Yang',
-        phoneNumber: '13800138031',
-        password: 'Password123!',
-      );
+    tearDown(() async {
+      await bloc.close();
+      await tearDownTestHive();
+    });
 
-      final session = await controller.requestPhoneVerification(
-        phoneNumber: '13800138000',
-      );
-
+    test('can verify phone with the demo code', () async {
+      await createBloc();
+      bloc.add(const AuthSignUpRequested(name: 'Liu Yang', phoneNumber: '13800138031', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthPhoneVerificationRequested(phoneNumber: '13800138000'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      final session = bloc.state.pendingPhoneSession;
       expect(session, isNotNull);
-
-      final success = await controller.confirmPhoneVerification(
-        code: session!.debugCode,
-      );
-
-      expect(success, isTrue);
-      expect(
-        controller.currentUser?.verification.phoneStatus,
-        VerificationStatus.verified,
-      );
-      expect(
-        controller.currentUser?.verification.phoneNumber,
-        '138****8000',
-      );
+      bloc.add(AuthPhoneVerificationConfirmed(code: session!.debugCode));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      expect(bloc.state.currentUser?.verification.phoneStatus, VerificationStatus.verified);
+      expect(bloc.state.currentUser?.verification.phoneNumber, '138****8000');
     });
 
     test('requires identity verification before face verification', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
-      await controller.signIn(
-        phoneNumber: '13800138000',
-        password: 'Password123!',
-      );
-
-      final success = await controller.completeFaceVerification();
-
-      expect(success, isFalse);
-      expect(
-        controller.errorMessage,
-        '请先完成身份证实名认证，再进行本人认证。',
-      );
-      expect(
-        controller.currentUser?.verification.faceStatus,
-        VerificationStatus.notStarted,
-      );
+      await createBloc();
+      bloc.add(const AuthSignInRequested(phoneNumber: '13800138000', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthFaceVerificationCompleted());
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      expect(bloc.state.errorMessage, '请先完成身份证实名认证，再进行本人认证。');
+      expect(bloc.state.currentUser?.verification.faceStatus, VerificationStatus.notStarted);
     });
 
     test('identity plus face verification completes the trust flow', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
-      await controller.signIn(
-        phoneNumber: '13800138000',
-        password: 'Password123!',
-      );
-
-      final idSuccess = await controller.submitIdentityVerification(
-        legalName: 'Liu Yang',
-        idNumber: '110105199001018211',
-      );
-      final faceSuccess = await controller.completeFaceVerification();
-
-      expect(idSuccess, isTrue);
-      expect(faceSuccess, isTrue);
-      expect(
-        controller.currentUser?.verification.identityStatus,
-        VerificationStatus.verified,
-      );
-      expect(
-        controller.currentUser?.verification.faceStatus,
-        VerificationStatus.verified,
-      );
-      expect(
-        controller.currentUser?.verification.faceMatchScore,
-        closeTo(0.984, 0.0001),
-      );
+      await createBloc();
+      bloc.add(const AuthSignInRequested(phoneNumber: '13800138000', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthIdentityVerificationSubmitted(legalName: 'Liu Yang', idNumber: '110105199001018211'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthFaceVerificationCompleted());
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      expect(bloc.state.currentUser?.verification.identityStatus, VerificationStatus.verified);
+      expect(bloc.state.currentUser?.verification.faceStatus, VerificationStatus.verified);
+      expect(bloc.state.currentUser?.verification.faceMatchScore, closeTo(0.984, 0.0001));
     });
 
     test('changing the avatar resets face verification', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
-      await controller.signIn(
-        phoneNumber: '13800138000',
-        password: 'Password123!',
-      );
-      await controller.submitIdentityVerification(
-        legalName: 'Liu Yang',
-        idNumber: '110105199001018211',
-      );
-      await controller.completeFaceVerification();
-
-      final updated = await controller.updateProfile(
-        name: 'Liu Yang',
-        avatarKey: 'ember',
-      );
-
-      expect(updated, isTrue);
-      expect(
-        controller.currentUser?.verification.faceStatus,
-        VerificationStatus.notStarted,
-      );
-      expect(controller.currentUser?.verification.faceMatchScore, isNull);
+      await createBloc();
+      bloc.add(const AuthSignInRequested(phoneNumber: '13800138000', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthIdentityVerificationSubmitted(legalName: 'Liu Yang', idNumber: '110105199001018211'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthFaceVerificationCompleted());
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthProfileUpdated(name: 'Liu Yang', avatarKey: 'ember'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      expect(bloc.state.currentUser?.verification.faceStatus, VerificationStatus.notStarted);
+      expect(bloc.state.currentUser?.verification.faceMatchScore, isNull);
     });
 
     test('persists demo account progress across repository recreation', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final store = await JsonPreferencesStore.create();
-      final controller = AuthController(
-        repository: await DemoAuthRepository.seeded(store: store),
-      );
-
-      await controller.signUp(
-        name: 'Persistent User',
-        phoneNumber: '13800138041',
-        password: 'Password123!',
-      );
-      final session = await controller.requestPhoneVerification(
-        phoneNumber: '13800138000',
-      );
-      await controller.confirmPhoneVerification(code: session!.debugCode);
-
-      final restoredController = AuthController(
+      await createBloc();
+      bloc.add(const AuthSignUpRequested(name: 'Persistent User', phoneNumber: '13800138041', password: 'Password123!'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      bloc.add(const AuthPhoneVerificationRequested(phoneNumber: '13800138000'));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      final session = bloc.state.pendingPhoneSession;
+      bloc.add(AuthPhoneVerificationConfirmed(code: session!.debugCode));
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+      await bloc.close();
+      final restoredBloc = AuthBloc(
         repository: await DemoAuthRepository.seeded(
           store: await JsonPreferencesStore.create(),
         ),
       );
-
-      expect(restoredController.currentUser?.email, '13800138041@37degrees.local');
-      expect(
-        restoredController.currentUser?.verification.phoneStatus,
-        VerificationStatus.verified,
-      );
+      expect(restoredBloc.state.currentUser?.email, '13800138041@37degrees.local');
+      expect(restoredBloc.state.currentUser?.verification.phoneStatus, VerificationStatus.verified);
+      await restoredBloc.close();
     });
   });
 }

@@ -1,17 +1,18 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+
+import 'dio_interceptors.dart';
 
 class ApiClient {
   ApiClient({
     required this.baseUrl,
-    http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+    Dio? dio,
+  }) : _dio = dio ?? _createDio(baseUrl);
 
   final String baseUrl;
-  final http.Client _httpClient;
+  final Dio _dio;
 
   String? _token;
 
@@ -21,12 +22,34 @@ class ApiClient {
     _token = value;
   }
 
+  static Dio _createDio(String baseUrl) {
+    final dio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: <String, dynamic>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+    return dio;
+  }
+
+  void attachInterceptors(String? Function() tokenGetter) {
+    _dio.interceptors.addAll([
+      AuthInterceptor(tokenGetter),
+      ErrorMappingInterceptor(),
+    ]);
+  }
+
   Future<bool> ping() async {
     try {
-      final response = await _httpClient
-          .get(Uri.parse('$baseUrl/health'))
+      final response = await _dio
+          .get<dynamic>('/health')
           .timeout(const Duration(seconds: 2));
-      return response.statusCode >= 200 && response.statusCode < 300;
+      return response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300;
     } catch (_) {
       return false;
     }
@@ -93,14 +116,24 @@ class ApiClient {
     required File file,
     Map<String, String>? fields,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
-    request.headers.addAll(_headers(includeJson: false));
+    final formData = FormData();
     if (fields != null) {
-      request.fields.addAll(fields);
+      formData.fields.addAll(
+        fields.entries.map((e) => MapEntry(e.key, e.value)),
+      );
     }
-    request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    formData.files.add(MapEntry(
+      fieldName,
+      await MultipartFile.fromFile(file.path),
+    ));
+
+    final response = await _dio.post<dynamic>(
+      path,
+      data: formData,
+      options: Options(headers: <String, dynamic>{
+        'Content-Type': 'multipart/form-data',
+      }),
+    );
     return _decodeResponse(response);
   }
 
@@ -122,70 +155,43 @@ class ApiClient {
     Object? body,
     Map<String, String>? queryParameters,
   }) async {
-    final uri = Uri.parse('$baseUrl$path').replace(
-      queryParameters: queryParameters?.isEmpty == true ? null : queryParameters,
+    final options = Options(method: method);
+
+    final response = await _dio.request<dynamic>(
+      path,
+      data: body,
+      queryParameters: queryParameters,
+      options: options,
     );
-
-    late final http.Response response;
-    switch (method) {
-      case 'GET':
-        response = await _httpClient.get(uri, headers: _headers());
-      case 'POST':
-        response = await _httpClient.post(
-          uri,
-          headers: _headers(),
-          body: body == null ? null : jsonEncode(body),
-        );
-      case 'PUT':
-        response = await _httpClient.put(
-          uri,
-          headers: _headers(),
-          body: body == null ? null : jsonEncode(body),
-        );
-      case 'PATCH':
-        response = await _httpClient.patch(
-          uri,
-          headers: _headers(),
-          body: body == null ? null : jsonEncode(body),
-        );
-      case 'DELETE':
-        response = await _httpClient.delete(
-          uri,
-          headers: _headers(),
-          body: body == null ? null : jsonEncode(body),
-        );
-      default:
-        throw ApiException('Unsupported method: $method');
-    }
-
     return _decodeResponse(response);
   }
 
-  Map<String, String> _headers({
-    bool includeJson = true,
-  }) {
-    return <String, String>{
-      if (includeJson) 'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      if (_token != null && _token!.isNotEmpty) 'Authorization': 'Bearer $_token',
-    };
-  }
+  Map<String, dynamic> _decodeResponse(Response<dynamic> response) {
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        return data;
+      }
+      throw ApiException(
+        data['message'] as String? ??
+            data['error'] as String? ??
+            'Request failed with status ${response.statusCode}.',
+        statusCode: response.statusCode,
+        details: data,
+      );
+    }
 
-  Map<String, dynamic> _decodeResponse(http.Response response) {
-    final decoded = response.body.isEmpty
-        ? const <String, dynamic>{}
-        : jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return decoded;
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      return data != null ? <String, dynamic>{'data': data} : const <String, dynamic>{};
     }
 
     throw ApiException(
-      decoded['message'] as String? ??
-          decoded['error'] as String? ??
-          'Request failed with status ${response.statusCode}.',
+      'Request failed with status ${response.statusCode}.',
       statusCode: response.statusCode,
-      details: decoded,
     );
   }
 }

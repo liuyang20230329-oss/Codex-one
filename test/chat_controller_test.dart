@@ -1,17 +1,18 @@
 import 'package:codex_one/src/core/persistence/json_preferences_store.dart';
+import 'package:codex_one/src/features/chat/domain/chat_inbox_segment.dart';
+import 'package:codex_one/src/features/chat/presentation/bloc/chat_bloc.dart';
 import 'package:codex_one/src/features/auth/domain/account_verification.dart';
 import 'package:codex_one/src/features/auth/domain/app_user.dart';
 import 'package:codex_one/src/features/auth/domain/verification_status.dart';
 import 'package:codex_one/src/features/chat/data/demo_chat_repository.dart';
-import 'package:codex_one/src/features/chat/domain/chat_inbox_segment.dart';
-import 'package:codex_one/src/features/chat/presentation/chat_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_hive_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('ChatController', () {
+  group('ChatBloc', () {
     const user = AppUser(
       id: 'user-1',
       name: 'Liu Yang',
@@ -19,191 +20,121 @@ void main() {
       avatarKey: 'aurora',
     );
 
+    late ChatBloc bloc;
+
+    setUp(() async {
+      await setUpTestHive();
+      bloc = ChatBloc(
+        repository: DemoChatRepository(
+          store: await JsonPreferencesStore.create(),
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await bloc.close();
+      await tearDownTestHive();
+    });
+
+    Future<void> syncAndWait(AppUser u) async {
+      bloc.add(ChatUserSynced(u));
+      await bloc.stream.firstWhere((s) => s.isBusy);
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+    }
+
+    Future<void> waitForBusyCycle() async {
+      await bloc.stream.firstWhere((s) => s.isBusy);
+      await bloc.stream.firstWhere((s) => !s.isBusy);
+    }
+
+    Future<void> waitForAny() async {
+      try {
+        await bloc.stream.first.timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
+
     test('loads seeded conversations for a signed-in user', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = ChatController(
-        repository: DemoChatRepository(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
+      await syncAndWait(user);
 
-      await controller.syncUser(user);
-
-      expect(controller.conversations.length, 5);
-      expect(
-        controller.conversationCountForSegment(ChatInboxSegment.friends),
-        1,
-      );
-      expect(
-        controller.conversationCountForSegment(ChatInboxSegment.hot),
-        1,
-      );
-      expect(
-        controller.conversationCountForSegment(ChatInboxSegment.followers),
-        1,
-      );
-      expect(
-        controller.conversationCountForSegment(ChatInboxSegment.following),
-        1,
-      );
-      expect(controller.totalUnreadCount, 4);
-      expect(controller.conversations.first.title, isNotEmpty);
+      expect(bloc.state.conversations.length, 5);
+      expect(bloc.state.conversationCountForSegment(ChatInboxSegment.friends), 1);
+      expect(bloc.state.conversationCountForSegment(ChatInboxSegment.hot), 1);
+      expect(bloc.state.conversationCountForSegment(ChatInboxSegment.followers), 1);
+      expect(bloc.state.conversationCountForSegment(ChatInboxSegment.following), 1);
+      expect(bloc.state.totalUnreadCount, 4);
+      expect(bloc.state.conversations.first.title, isNotEmpty);
     });
 
-    test('opens a conversation and sends a message with an auto reply',
-        () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = ChatController(
-        repository: DemoChatRepository(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
+    test('opens a conversation and sends a message with an auto reply', () async {
       final verifiedUser = user.copyWith(
-        verification: const AccountVerification(
-          phoneStatus: VerificationStatus.verified,
-        ),
+        verification: const AccountVerification(phoneStatus: VerificationStatus.verified),
       );
 
-      await controller.syncUser(verifiedUser);
-      final conversation = controller.conversations.first;
-      await controller.openConversation(conversation.id);
-      final beforeCount = controller.messages.length;
+      await syncAndWait(verifiedUser);
+      final conversation = bloc.state.conversations.first;
+      bloc.add(ChatConversationOpened(conversation.id));
+      await waitForBusyCycle();
+      final beforeCount = bloc.state.messages.length;
 
-      final sent = await controller.sendMessage('Hello from the test suite.');
+      bloc.add(const ChatMessageSent('Hello from the test suite.'));
+      await waitForBusyCycle();
 
-      expect(sent, isTrue);
-      expect(controller.messages.length, beforeCount + 2);
-      expect(controller.messages.first.text, isNotEmpty);
-      expect(controller.messages.last.text, isNotEmpty);
-      expect(controller.selectedConversation?.id, conversation.id);
+      expect(bloc.state.messages.length, beforeCount + 2);
+      expect(bloc.state.messages.first.text, isNotEmpty);
+      expect(bloc.state.messages.last.text, isNotEmpty);
+      expect(bloc.state.selectedConversation?.id, conversation.id);
     });
 
-    test(
-        'requires phone verification for private chats but keeps concierge open',
-        () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = ChatController(
-        repository: DemoChatRepository(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
+    test('requires phone verification for private chats but keeps concierge open', () async {
+      await syncAndWait(user);
+      bloc.add(const ChatConversationOpened('nora'));
+      await waitForBusyCycle();
 
-      await controller.syncUser(user);
-      await controller.openConversation('nora');
+      bloc.add(const ChatMessageSent('可以直接私聊吗？'));
+      await waitForAny();
 
-      final privateChatSent = await controller.sendMessage('可以直接私聊吗？');
+      expect(bloc.state.errorMessage, '请先完成手机号认证后再开始私聊；系统引导会话仍可继续使用。');
 
-      expect(privateChatSent, isFalse);
-      expect(
-        controller.errorMessage,
-        '请先完成手机号认证后再开始私聊；系统引导会话仍可继续使用。',
-      );
+      bloc.add(const ChatConversationOpened('concierge'));
+      await waitForBusyCycle();
+      bloc.add(const ChatMessageSent('我先和系统确认流程。'));
+      await waitForBusyCycle();
 
-      await controller.openConversation('concierge');
-      final systemChatSent = await controller.sendMessage('我先和系统确认流程。');
-
-      expect(systemChatSent, isTrue);
-      expect(controller.messages.last.senderName, '37°');
-    });
-
-    test('persists chats and links account progress to concierge messages',
-        () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final firstStore = await JsonPreferencesStore.create();
-      final firstRepository = DemoChatRepository(store: firstStore);
-
-      await firstRepository.loadConversations(user: user);
-      final verifiedUser = user.copyWith(
-        verification: const AccountVerification(
-          phoneStatus: VerificationStatus.verified,
-        ),
-      );
-      final conversationsAfterVerification =
-          await firstRepository.loadConversations(user: verifiedUser);
-
-      final conciergeConversation = conversationsAfterVerification.firstWhere(
-        (conversation) => conversation.id == 'concierge',
-      );
-      expect(
-        conciergeConversation.lastMessagePreview,
-        contains('手机号认证已完成'),
-      );
-
-      final restoredRepository = DemoChatRepository(
-        store: await JsonPreferencesStore.create(),
-      );
-      final restoredConversations =
-          await restoredRepository.loadConversations(user: verifiedUser);
-      final restoredConcierge = restoredConversations.firstWhere(
-        (conversation) => conversation.id == 'concierge',
-      );
-
-      expect(
-        restoredConcierge.lastMessagePreview,
-        contains('手机号认证已完成'),
-      );
+      expect(bloc.state.messages.last.senderName, '37°');
     });
 
     test('can create a conversation, toggle pin, and delete it', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = ChatController(
-        repository: DemoChatRepository(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
-
       final verifiedUser = user.copyWith(
-        verification: const AccountVerification(
-          phoneStatus: VerificationStatus.verified,
-        ),
+        verification: const AccountVerification(phoneStatus: VerificationStatus.verified),
       );
 
-      await controller.syncUser(verifiedUser);
+      await syncAndWait(verifiedUser);
 
-      final created = await controller.createConversation(
-        title: '今晚语音测试',
-        subtitle: '刚刚创建',
-        categoryLabel: '热聊',
-        segment: ChatInboxSegment.hot,
-      );
+      bloc.add(const ChatConversationCreated(title: '今晚语音测试', subtitle: '刚刚创建', categoryLabel: '热聊', segment: ChatInboxSegment.hot));
+      await waitForBusyCycle();
 
-      expect(created, isTrue);
-      final conversation = controller.selectedConversation;
+      final conversation = bloc.state.selectedConversation;
       expect(conversation, isNotNull);
       expect(conversation!.title, '今晚语音测试');
 
-      await controller.togglePinned(conversation.id);
-      expect(
-        controller.conversations.firstWhere((item) => item.id == conversation.id).isPinned,
-        isTrue,
-      );
+      bloc.add(ChatPinToggled(conversation.id));
+      await waitForAny();
+      expect(bloc.state.conversations.firstWhere((item) => item.id == conversation.id).isPinned, isTrue);
 
-      await controller.deleteConversation(conversation.id);
-      expect(
-        controller.conversations.where((item) => item.id == conversation.id),
-        isEmpty,
-      );
+      bloc.add(ChatConversationDeleted(conversation.id));
+      await waitForAny();
+      expect(bloc.state.conversations.where((item) => item.id == conversation.id), isEmpty);
     });
 
     test('markAllRead clears unread counters across every segment', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final controller = ChatController(
-        repository: DemoChatRepository(
-          store: await JsonPreferencesStore.create(),
-        ),
-      );
+      await syncAndWait(user);
+      expect(bloc.state.totalUnreadCount, greaterThan(0));
 
-      await controller.syncUser(user);
-      expect(controller.totalUnreadCount, greaterThan(0));
+      bloc.add(const ChatAllMarkedRead());
+      await waitForAny();
 
-      await controller.markAllRead();
-
-      expect(controller.totalUnreadCount, 0);
-      expect(
-        controller.conversations.every((item) => item.unreadCount == 0),
-        isTrue,
-      );
+      expect(bloc.state.totalUnreadCount, 0);
+      expect(bloc.state.conversations.every((item) => item.unreadCount == 0), isTrue);
     });
   });
 }

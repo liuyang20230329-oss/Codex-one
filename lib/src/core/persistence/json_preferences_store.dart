@@ -1,14 +1,17 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import 'hive_init.dart';
 
 class JsonPreferencesStore {
-  JsonPreferencesStore(this._preferences);
+  JsonPreferencesStore(this._box);
 
-  final SharedPreferences _preferences;
+  final Box<String> _box;
 
   static Future<JsonPreferencesStore> create() async {
-    return JsonPreferencesStore(await SharedPreferences.getInstance());
+    final box = await Hive.openBox<String>(HiveBoxes.preferences);
+    return JsonPreferencesStore(box);
   }
 
   Future<Map<String, Object?>?> readObject(String key) async {
@@ -16,11 +19,10 @@ class JsonPreferencesStore {
   }
 
   Map<String, Object?>? readObjectSync(String key) {
-    final raw = _preferences.getString(key);
+    final raw = _box.get(key);
     if (raw == null || raw.isEmpty) {
       return null;
     }
-
     final decoded = jsonDecode(raw);
     if (decoded is Map<String, dynamic>) {
       return decoded.cast<String, Object?>();
@@ -33,11 +35,10 @@ class JsonPreferencesStore {
   }
 
   List<Object?>? readListSync(String key) {
-    final raw = _preferences.getString(key);
+    final raw = _box.get(key);
     if (raw == null || raw.isEmpty) {
       return null;
     }
-
     final decoded = jsonDecode(raw);
     if (decoded is List) {
       return decoded.cast<Object?>();
@@ -46,10 +47,10 @@ class JsonPreferencesStore {
   }
 
   Future<void> writeJson(String key, Object? value) async {
-    await _preferences.setString(key, jsonEncode(value));
+    await _box.put(key, jsonEncode(value));
   }
 
   Future<void> remove(String key) async {
-    await _preferences.remove(key);
+    await _box.delete(key);
   }
 }
